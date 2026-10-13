@@ -59,6 +59,14 @@ def remove_isolated_noise_pixels(rgba_arr: np.ndarray, min_area: int = 18) -> np
     return out
 
 
+_REMBG_SESSION = None
+
+def get_rembg_session():
+    global _REMBG_SESSION
+    if _REMBG_SESSION is None:
+        _REMBG_SESSION = rembg.new_session("u2net")
+    return _REMBG_SESSION
+
 def process_image(
     input_image: Image.Image,
     target_size: int = 96,
@@ -76,9 +84,16 @@ def process_image(
     """
     raw_rgba = input_image.convert("RGBA")
 
+    # Safety: downsample excessively huge inputs to max 1024px before background removal
+    w, h = raw_rgba.size
+    if max(w, h) > 1024:
+        factor = 1024.0 / max(w, h)
+        raw_rgba = raw_rgba.resize((int(w * factor), int(h * factor)), Image.Resampling.LANCZOS)
+
     # 1. Background removal
     if remove_bg:
-        nobg = rembg.remove(raw_rgba, post_process_mask=True)
+        session = get_rembg_session()
+        nobg = rembg.remove(raw_rgba, session=session, post_process_mask=True)
         arr = np.array(nobg)
     else:
         arr = np.array(raw_rgba)

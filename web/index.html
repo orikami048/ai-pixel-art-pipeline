@@ -916,6 +916,86 @@
     </div>
   </main>
 
+  <!-- 放大预览弹窗 (Lightbox Modal) -->
+  <div class="modal-backdrop" id="preview-modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px;">
+          <span>🔍 高清真像素巨幅检视</span>
+          <span style="font-size:12px; color:var(--accent-gold);" id="modal-info-badge"></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="capsule-btn" id="btn-modal-zoom-out" style="padding:4px 10px;">- 缩小</button>
+          <span id="lbl-modal-zoom" style="font-size:12px; font-family:monospace; color:var(--accent-cyan); min-width:45px; text-align:center;">400%</span>
+          <button class="capsule-btn" id="btn-modal-zoom-in" style="padding:4px 10px;">+ 放大</button>
+          <button class="btn btn-secondary" id="btn-close-modal" style="padding:4px 12px; font-size:12px; margin-left:8px;">✕ 关闭</button>
+        </div>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <img id="modal-img" class="pixel-target-img" alt="高清检视">
+      </div>
+    </div>
+  </div>
+
+  <!-- 各类资产生图规范与底色指南弹窗 -->
+  <div class="modal-backdrop" id="guide-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 880px; height: auto; max-height: 90vh;">
+      <div class="modal-header">
+        <div style="font-weight:700; font-size:16px; display:flex; align-items:center; gap:8px;">
+          <span>📖 AI 像素游戏各类资产生图规范与底色指南</span>
+        </div>
+        <button class="btn btn-secondary" id="btn-close-guide-modal" style="padding:4px 12px; font-size:12px;">✕ 关闭</button>
+      </div>
+      <div style="padding: 20px 24px; overflow-y: auto; color: var(--text-main); font-size: 13px; line-height: 1.6;">
+        <div style="background: rgba(0, 240, 255, 0.08); border-left: 4px solid var(--accent-cyan); padding: 12px 16px; border-radius: 4px; margin-bottom: 18px;">
+          <strong>💡 为什么底色决定成败？</strong><br>
+          AI 会根据背景产生反光与羽化混色。严禁使用纯绿幕，因为绿幕会导致严重的<b>绿色反光污染</b>以及把青绿特效当成背景吃掉！请根据资产类型选用对应底色。
+        </div>
+
+        <div style="display: grid; gap: 16px;">
+          <!-- 规范 1 -->
+          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size: 14px; font-weight: 700; color: var(--accent-cyan);">1. 常规实体道具 / 角色 (Solid Sprite)</span>
+              <span style="font-size: 11px; background: #1a2233; color: #8ba2c4; padding: 2px 8px; border-radius: 4px;">推荐底色: 中性暗灰底 (#1a1e28)</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">适用于金属武器、金甲、药水、宝箱及正常服饰角色。RGB 色彩均衡不偏色，最利于抓取 1px 深黑轮廓线。</p>
+            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
+              16-bit retro pixel art game sprite of [道具名称], isolated on neutral dark grey background, clean solid 1px dark pixel outline, high contrast vibrant retro RPG item, crisp pixelated edges
+              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art game sprite of [ITEM_NAME], isolated on neutral dark grey background, clean solid 1px dark pixel outline, high contrast vibrant retro RPG item, crisp pixelated edges" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
+            </div>
+          </div>
+
+          <!-- 规范 2 -->
+          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size: 14px; font-weight: 700; color: #ffb86c;">2. 深色系实体装备 / 暗影人物 (Dark Sprite)</span>
+              <span style="font-size: 11px; background: #262118; color: #ffd899; padding: 2px 8px; border-radius: 4px;">推荐底色: 中性浅灰底 (#e0e4ec)</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">适用于黑衣刺客、黑曜石重剑、死灵黑袍。浅色底可避免深色披风与黑发“融底”，确保轮廓清晰。</p>
+            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
+              16-bit retro pixel art game sprite of [深色道具], isolated on clean light grey background, dark obsidian material, sharp crisp pixel silhouette
+              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art game sprite of [DARK_ITEM_NAME], isolated on clean light grey background, dark obsidian material, sharp crisp pixel silhouette" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
+            </div>
+          </div>
+
+          <!-- 规范 3 -->
+          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size: 14px; font-weight: 700; color: #50fa7b;">3. 发光特效 / 剑气雷电 / 魔法光环 (Glow & VFX)</span>
+              <span style="font-size: 11px; background: #16291a; color: #50fa7b; padding: 2px 8px; border-radius: 4px;">强烈推荐: 纯黑底 (#000000)</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">发光属于加色混合（Additive）。纯黑底具备 100% 原始发光色还原度，结合本工具的【发光特效模式】可实现 0% 细节丢失无损提取！</p>
+            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
+              16-bit retro pixel art glowing magic aura of [光环/雷电特征], glowing cyan lightning and floating sparkles, isolated on pure black background #000000, translucent additive glow, no weapon body
+              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art glowing magic aura of [AURA_DESC], glowing cyan lightning and floating sparkles, isolated on pure black background #000000, translucent additive glow, no weapon body" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
     // 全局状态
     const state = {
@@ -1174,6 +1254,10 @@
       pixelGridOverlay.style.backgroundSize = `${unitSize}px ${unitSize}px`;
     }
 
+    // 全局防外部拖拽误跳出页面
+    window.addEventListener('dragover', (e) => e.preventDefault());
+    window.addEventListener('drop', (e) => e.preventDefault());
+
     // 拖拽文件事件
     ['dragenter', 'dragover'].forEach(name => {
       dropzone.addEventListener(name, (e) => {
@@ -1190,8 +1274,9 @@
     });
 
     dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
       const files = e.dataTransfer.files;
-      if (files.length > 0) handleFiles(files);
+      if (files && files.length > 0) handleFiles(files);
     });
 
     fileInput.addEventListener('change', (e) => {
@@ -1213,6 +1298,8 @@
 
     // 处理选中的文件
     async function handleFiles(files) {
+      if (!files || files.length === 0) return;
+      fileInput.value = '';
       if (files.length === 1) {
         const file = files[0];
         const base64 = await fileToBase64(file);
@@ -1550,85 +1637,5 @@
       }
     });
   </script>
-
-  <!-- 放大预览弹窗 (Lightbox Modal) -->
-  <div class="modal-backdrop" id="preview-modal" style="display:none;">
-    <div class="modal-content">
-      <div class="modal-header">
-        <div style="font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px;">
-          <span>🔍 高清真像素巨幅检视</span>
-          <span style="font-size:12px; color:var(--accent-gold);" id="modal-info-badge"></span>
-        </div>
-        <div style="display:flex; align-items:center; gap:8px;">
-          <button class="capsule-btn" id="btn-modal-zoom-out" style="padding:4px 10px;">- 缩小</button>
-          <span id="lbl-modal-zoom" style="font-size:12px; font-family:monospace; color:var(--accent-cyan); min-width:45px; text-align:center;">400%</span>
-          <button class="capsule-btn" id="btn-modal-zoom-in" style="padding:4px 10px;">+ 放大</button>
-          <button class="btn btn-secondary" id="btn-close-modal" style="padding:4px 12px; font-size:12px; margin-left:8px;">✕ 关闭</button>
-        </div>
-      </div>
-      <div class="modal-body" id="modal-body">
-        <img id="modal-img" class="pixel-target-img" alt="高清检视">
-      </div>
-    </div>
-  </div>
-
-  <!-- 各类资产生图规范与底色指南弹窗 -->
-  <div class="modal-backdrop" id="guide-modal" style="display:none;">
-    <div class="modal-content" style="max-width: 880px; height: auto; max-height: 90vh;">
-      <div class="modal-header">
-        <div style="font-weight:700; font-size:16px; display:flex; align-items:center; gap:8px;">
-          <span>📖 AI 像素游戏各类资产生图规范与底色指南</span>
-        </div>
-        <button class="btn btn-secondary" id="btn-close-guide-modal" style="padding:4px 12px; font-size:12px;">✕ 关闭</button>
-      </div>
-      <div style="padding: 20px 24px; overflow-y: auto; color: var(--text-main); font-size: 13px; line-height: 1.6;">
-        <div style="background: rgba(0, 240, 255, 0.08); border-left: 4px solid var(--accent-cyan); padding: 12px 16px; border-radius: 4px; margin-bottom: 18px;">
-          <strong>💡 为什么底色决定成败？</strong><br>
-          AI 会根据背景产生反光与羽化混色。严禁使用纯绿幕，因为绿幕会导致严重的<b>绿色反光污染</b>以及把青绿特效当成背景吃掉！请根据资产类型选用对应底色。
-        </div>
-
-        <div style="display: grid; gap: 16px;">
-          <!-- 规范 1 -->
-          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size: 14px; font-weight: 700; color: var(--accent-cyan);">1. 常规实体道具 / 角色 (Solid Sprite)</span>
-              <span style="font-size: 11px; background: #1a2233; color: #8ba2c4; padding: 2px 8px; border-radius: 4px;">推荐底色: 中性暗灰底 (#1a1e28)</span>
-            </div>
-            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">适用于金属武器、金甲、药水、宝箱及正常服饰角色。RGB 色彩均衡不偏色，最利于抓取 1px 深黑轮廓线。</p>
-            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
-              16-bit retro pixel art game sprite of [道具名称], isolated on neutral dark grey background, clean solid 1px dark pixel outline, high contrast vibrant retro RPG item, crisp pixelated edges
-              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art game sprite of [ITEM_NAME], isolated on neutral dark grey background, clean solid 1px dark pixel outline, high contrast vibrant retro RPG item, crisp pixelated edges" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
-            </div>
-          </div>
-
-          <!-- 规范 2 -->
-          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size: 14px; font-weight: 700; color: #ffb86c;">2. 深色系实体装备 / 暗影人物 (Dark Sprite)</span>
-              <span style="font-size: 11px; background: #262118; color: #ffd899; padding: 2px 8px; border-radius: 4px;">推荐底色: 中性浅灰底 (#e0e4ec)</span>
-            </div>
-            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">适用于黑衣刺客、黑曜石重剑、死灵黑袍。浅色底可避免深色披风与黑发“融底”，确保轮廓清晰。</p>
-            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
-              16-bit retro pixel art game sprite of [深色道具], isolated on clean light grey background, dark obsidian material, sharp crisp pixel silhouette
-              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art game sprite of [DARK_ITEM_NAME], isolated on clean light grey background, dark obsidian material, sharp crisp pixel silhouette" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
-            </div>
-          </div>
-
-          <!-- 规范 3 -->
-          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size: 14px; font-weight: 700; color: #50fa7b;">3. 发光特效 / 剑气雷电 / 魔法光环 (Glow & VFX)</span>
-              <span style="font-size: 11px; background: #16291a; color: #50fa7b; padding: 2px 8px; border-radius: 4px;">强烈推荐: 纯黑底 (#000000)</span>
-            </div>
-            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">发光属于加色混合（Additive）。纯黑底具备 100% 原始发光色还原度，结合本工具的【发光特效模式】可实现 0% 细节丢失无损提取！</p>
-            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
-              16-bit retro pixel art glowing magic aura of [光环/雷电特征], glowing cyan lightning and floating sparkles, isolated on pure black background #000000, translucent additive glow, no weapon body
-              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art glowing magic aura of [AURA_DESC], glowing cyan lightning and floating sparkles, isolated on pure black background #000000, translucent additive glow, no weapon body" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 </body>
 </html>
