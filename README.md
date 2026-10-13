@@ -58,16 +58,6 @@ clean solid 1px dark pixel outline, high contrast vibrant retro RPG inventory ic
 crisp pixelated edges, authentic pixel art game asset
 ```
 
-### 经典品类提示词范例
-
-| 资产类别            | 推荐 Prompt 片段                                                                                                                                                                   | 推荐目标分辨率           |
-| :-------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------- |
-| **武器 (Weapon)** | `16-bit retro pixel art game sprite of a heavy steel greatsword with a glowing blue gem in the hilt, dark background, clean solid 1px pixel outline, authentic retro RPG item` | `64×64` 或 `96×96` |
-| **防具 (Armor)**  | `16-bit retro pixel art game icon of an ornate knight chestplate armor, golden trims, polished steel plate, dark neutral background, crisp pixelated edges`                    | `64×64`           |
-| **药水 (Potion)** | `16-bit retro pixel art potion bottle filled with swirling red health elixir, glass cork, vibrant bubbles, dark neutral background, clean pixel outline`                       | `32×32` 或 `48×48` |
-| **宝箱 (Chest)**  | `16-bit retro pixel art treasure chest, wooden planks with sturdy iron bands, glowing golden keyhole, dark background, crisp edges`                                            | `48×48` 或 `64×64` |
-| **法杖 (Staff)**  | `16-bit retro pixel art wizard staff, twisted dark wood topped with a floating arcane purple crystal orb, emitting slight sparks, dark background`                             | `64×64` 或 `96×96` |
-
 ---
 
 ## 🚀 快速开始

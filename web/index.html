@@ -502,27 +502,10 @@
       transition: width 0.15s ease-out, height 0.15s ease-out;
     }
 
-    /* 当尚未载入图片时，隐藏 img 标签自带的破损图标/占位框 */
+    /* 当尚未载入图片时，隐藏 img 标签自带的破损图标/占位框，保持纯净黑灰棋盘格背景 */
     .original-target-img:not([src]), .original-target-img[src=""],
     .pixel-target-img:not([src]), .pixel-target-img[src=""] {
       display: none !important;
-    }
-
-    .view-empty-state {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      color: var(--text-muted);
-      font-size: 13px;
-      pointer-events: none;
-      user-select: none;
-    }
-
-    .view-empty-icon {
-      font-size: 36px;
-      opacity: 0.35;
     }
 
     /* 360度方向轮盘控件 */
@@ -1166,10 +1149,6 @@
               <span id="raw-res-meta">-</span>
             </div>
             <div class="view-body" id="view-body-original">
-              <div class="view-empty-state" id="empty-state-orig">
-                <span class="view-empty-icon">🖼️</span>
-                <span>等待导入原画图像</span>
-              </div>
               <img id="img-original" class="original-target-img" alt="原始图像">
             </div>
           </div>
@@ -1184,10 +1163,6 @@
               </div>
             </div>
             <div class="view-body" id="view-body-pixel">
-              <div class="view-empty-state" id="empty-state-pixel">
-                <span class="view-empty-icon">🎨</span>
-                <span>生成后的像素资产将在此呈现</span>
-              </div>
               <div class="pixel-frame" id="pixel-frame">
                 <img id="img-pixel" class="pixel-target-img" alt="真像素成品">
                 <div class="pixel-grid-overlay" id="pixel-grid-overlay"></div>
@@ -1951,14 +1926,6 @@
           scaleFactorBadge.innerText = `当前缩放: ${pct}% (${renderSize} × ${renderSize} px)`;
         }
       }
-
-      // 控制占位状态显示 (无图片时展示干净的居中占位提示，彻底消除浏览器破损图框)
-      const hasOrig = imgOriginal.getAttribute('src') && imgOriginal.getAttribute('src').trim() !== '';
-      const hasPixel = imgPixel.getAttribute('src') && imgPixel.getAttribute('src').trim() !== '';
-      const emptyOrig = document.getElementById('empty-state-orig');
-      const emptyPixel = document.getElementById('empty-state-pixel');
-      if (emptyOrig) emptyOrig.style.display = hasOrig ? 'none' : 'flex';
-      if (emptyPixel) emptyPixel.style.display = hasPixel ? 'none' : 'flex';
 
       setTimeout(updateGridSize, 120);
     }
