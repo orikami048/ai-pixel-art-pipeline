@@ -1264,6 +1264,7 @@
     });
 
     dropzoneL1.addEventListener('drop', async (e) => {
+      e.preventDefault();
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
         state.layer1Base64 = await fileToBase64(files[0]);
@@ -1271,14 +1272,25 @@
         imgOriginal.src = state.layer1Base64;
         state.currentRawBase64 = state.layer1Base64;
         applyZoom();
+        if (state.layer2Base64) {
+          await processSingle(`合体：${files[0].name}`, state.layer1Base64);
+        } else {
+          document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
+        }
       }
     });
 
     dropzoneL2.addEventListener('drop', async (e) => {
+      e.preventDefault();
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
         state.layer2Base64 = await fileToBase64(files[0]);
         document.getElementById('lbl-l2-status').innerText = `已载入: ${files[0].name}`;
+        if (state.layer1Base64) {
+          await processSingle(`合体：${files[0].name}`, state.layer1Base64);
+        } else {
+          document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
+        }
       }
     });
 
@@ -1300,6 +1312,11 @@
         imgOriginal.src = state.layer1Base64;
         state.currentRawBase64 = state.layer1Base64;
         applyZoom();
+        if (state.layer2Base64) {
+          await processSingle(`合体：${file.name}`, state.layer1Base64);
+        } else {
+          document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
+        }
       }
       e.target.value = '';
     });
@@ -1309,6 +1326,11 @@
         const file = e.target.files[0];
         state.layer2Base64 = await fileToBase64(file);
         document.getElementById('lbl-l2-status').innerText = `已载入: ${file.name}`;
+        if (state.layer1Base64) {
+          await processSingle(`合体：${file.name}`, state.layer1Base64);
+        } else {
+          document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
+        }
       }
       e.target.value = '';
     });
@@ -1409,6 +1431,10 @@
       });
     });
 
+    dropzone.addEventListener('click', (e) => {
+      if (e.target !== fileInput) fileInput.click();
+    });
+
     dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
       const files = e.dataTransfer.files;
@@ -1416,7 +1442,7 @@
     });
 
     fileInput.addEventListener('change', (e) => {
-      if (e.target.files.length > 0) handleFiles(e.target.files);
+      if (e.target.files && e.target.files.length > 0) handleFiles(e.target.files);
     });
 
     // 剪贴板 Ctrl+V 粘贴
@@ -1445,9 +1471,9 @@
         state.currentRawBase64 = base64;
         state.currentNativeBase64 = null;
         imgOriginal.src = base64;
-        imgPixel.src = '';
-        document.getElementById('item-title-meta').innerText = `• ${file.name} (已就绪，调参后点击【开始生成】)`;
         applyZoom();
+        // 自动立即执行像素化生成
+        await processSingle(file.name, base64);
       } else {
         // 多图批量处理
         state.batchItems = [];
@@ -1464,7 +1490,8 @@
         }
         renderBatchTray();
         selectBatchItem(0);
-        document.getElementById('item-title-meta').innerText = `• 共 ${files.length} 张图片已导入 (调参后点击【开始生成】)`;
+        // 多图也自动开始批量转换队列
+        await processBatchQueue();
       }
     }
 
