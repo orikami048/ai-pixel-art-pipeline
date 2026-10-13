@@ -926,16 +926,6 @@
 
       </div>
 
-      <!-- 快捷示例 -->
-      <div class="panel-card">
-        <div class="panel-title">💡 快速测试示例</div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-          <button class="capsule-btn" id="btn-demo-sword">🗡️ 实体飞剑</button>
-          <button class="capsule-btn" id="btn-demo-vfx">✨ 发光剑气</button>
-          <button class="capsule-btn" id="btn-demo-boots">👢 灵风战靴</button>
-          <button class="capsule-btn" style="border-color:var(--accent-cyan); color:var(--accent-cyan);" id="btn-demo-composite">⚔️ 飞剑+剑气合体</button>
-        </div>
-      </div>
     </div>
 
     <!-- 右侧工作区 -->
@@ -1912,71 +1902,6 @@
       a.click();
     }
 
-    // 预置 Demo 图片
-    document.getElementById('btn-demo-sword').addEventListener('click', () => {
-      document.querySelector('.capsule-btn[data-mode="solid"]').click();
-      loadDemo('/examples/divine_flying_sword.jpg', 'divine_sword.jpg');
-    });
-
-    document.getElementById('btn-demo-vfx').addEventListener('click', () => {
-      document.querySelector('.capsule-btn[data-mode="vfx"]').click();
-      loadDemo('/examples/demo_sword_aura.png', 'sword_aura_vfx.png');
-    });
-
-    document.getElementById('btn-demo-boots').addEventListener('click', () => {
-      document.querySelector('.capsule-btn[data-mode="solid"]').click();
-      loadDemo('/examples/celestial_daoist_robe.jpg', 'daoist_robe.jpg');
-    });
-
-    document.getElementById('btn-demo-composite').addEventListener('click', async () => {
-      document.querySelector('.capsule-btn[data-mode="composite"]').click();
-      loadingOverlay.classList.add('active');
-      loadingText.innerText = '正在载入合体演示资产 (实体剑身 + 剑气发光)...';
-      try {
-        const [resL1, resL2] = await Promise.all([
-          fetch('/examples/demo_sword_body.png').then(r => r.blob()).then(fileToBase64),
-          fetch('/examples/demo_sword_aura.png').then(r => r.blob()).then(fileToBase64)
-        ]);
-        state.layer1Base64 = resL1;
-        state.layer2Base64 = resL2;
-        state.currentRawBase64 = resL1;
-        imgOriginal.src = resL1;
-        document.getElementById('lbl-l1-status').innerText = '已载入: demo_sword_body.png';
-        document.getElementById('lbl-l2-status').innerText = '已载入: demo_sword_aura.png';
-        state.offsetX = 0;
-        state.offsetY = 0;
-        if (document.getElementById('range-offset-x')) document.getElementById('range-offset-x').value = 0;
-        if (document.getElementById('range-offset-y')) document.getElementById('range-offset-y').value = 0;
-        if (document.getElementById('lbl-offset-x')) document.getElementById('lbl-offset-x').innerText = '0 px';
-        if (document.getElementById('lbl-offset-y')) document.getElementById('lbl-offset-y').innerText = '0 px';
-        applyZoom();
-        await processSingle('飞剑+剑气双层发光合体', resL1);
-      } catch (e) {
-        console.error('合体示例加载失败', e);
-        alert('合体示例加载失败: ' + e.message);
-      } finally {
-        loadingOverlay.classList.remove('active');
-      }
-    });
-
-    async function loadDemo(url, name) {
-      try {
-        const resp = await fetch(url);
-        const blob = await resp.blob();
-        const base64 = await fileToBase64(blob);
-        state.batchItems = [];
-        batchTray.style.display = 'none';
-        btnDownloadBatchZip.style.display = 'none';
-        state.currentRawBase64 = base64;
-        state.currentNativeBase64 = null;
-        imgOriginal.src = base64;
-        imgPixel.src = '';
-        document.getElementById('item-title-meta').innerText = `• ${name} (已就绪，调参后点击【开始生成】)`;
-        applyZoom();
-      } catch (e) {
-        console.error('Demo load failed', e);
-      }
-    }
 
     // 前端 60FPS 实时合体渲染与鼠标自由拖拽
     const pixelFrame = document.getElementById('pixel-frame');
