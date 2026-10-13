@@ -812,20 +812,8 @@
 
         <!-- 实体专属控制组 (Solid Controls) -->
         <div id="solid-controls-group">
-          <!-- AI 背景移除开关 -->
-          <div class="switch-row">
-            <div>
-              <div class="switch-label">AI 深度背景抠图</div>
-              <div class="switch-subtext">去除杂色背景并边缘羽化侵蚀</div>
-            </div>
-            <label class="switch">
-              <input type="checkbox" id="chk-rembg" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-
           <!-- 1px 正交实体黑描边 -->
-          <div class="switch-row" style="margin-top: 12px;">
+          <div class="switch-row">
             <div>
               <div class="switch-label">1px 正交闭合描边</div>
               <div class="switch-subtext">纯正独立游戏复古像素硬轮廓</div>
@@ -1308,10 +1296,6 @@
     document.getElementById('range-colors').addEventListener('input', (e) => {
       state.colorCount = parseInt(e.target.value);
       document.getElementById('lbl-colors').innerText = `${state.colorCount} 色`;
-    });
-
-    document.getElementById('chk-rembg').addEventListener('change', (e) => {
-      state.removeBg = e.target.checked;
     });
 
     document.getElementById('chk-outline').addEventListener('change', (e) => {

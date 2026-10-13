@@ -111,9 +111,10 @@ def process_image(
         bg_std = np.std(corner_pixels, axis=0).mean()
         if bg_std < 25:
             color_dist = np.linalg.norm(raw_arr[:, :, :3] - bg_color, axis=2)
-            # 色差显著大于背景且被 rembg 误降透明度的像素，予以保底唤醒
-            mistakenly_erased = (color_dist > 32) & (arr[:, :, 3] < 120)
+            # 色差显著大于背景且被 rembg 误降透明度/清零RGB的像素，予以保底唤醒并恢复原色
+            mistakenly_erased = (color_dist > 25) & (arr[:, :, 3] < 120)
             if np.any(mistakenly_erased):
+                arr[mistakenly_erased, :3] = raw_arr[mistakenly_erased, :3]
                 arr[mistakenly_erased, 3] = np.clip(color_dist[mistakenly_erased] * 5, 180, 255).astype(np.uint8)
     else:
         arr = np.array(raw_rgba)
