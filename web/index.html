@@ -552,6 +552,14 @@
       box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
     }
 
+    @keyframes btn-ready-glow {
+      0%, 100% { box-shadow: 0 0 16px rgba(0, 240, 255, 0.45); transform: scale(1); }
+      50% { box-shadow: 0 0 30px rgba(0, 240, 255, 0.95); transform: scale(1.02); }
+    }
+    .btn-primary.pulse-ready {
+      animation: btn-ready-glow 1s ease-in-out 3;
+    }
+
     .btn-secondary {
       background: #192231;
       border-color: var(--border-color);
@@ -1379,8 +1387,8 @@
         applyZoom();
         addLog('success', `图层 1 [${file.name}] 载入就绪`);
         if (state.layer2Base64) {
-          addLog('info', '双图层均已就绪，立即执行双层合体生成...');
-          await processSingle(`合体：${file.name}`, state.layer1Base64);
+          document.getElementById('item-title-meta').innerText = '• 双图层已就绪 (调参后点击【开始生成】)';
+          addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮执行合体。');
         } else {
           document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
           addLog('info', '图层 1 已就绪，请继续在右侧拖入或点击导入图层 2 (发光特效)');
@@ -1398,8 +1406,8 @@
         document.getElementById('lbl-l2-status').innerText = `已载入: ${file.name}`;
         addLog('success', `图层 2 [${file.name}] 载入就绪`);
         if (state.layer1Base64) {
-          addLog('info', '双图层均已就绪，立即执行双层合体生成...');
-          await processSingle(`合体：${file.name}`, state.layer1Base64);
+          document.getElementById('item-title-meta').innerText = '• 双图层已就绪 (调参后点击【开始生成】)';
+          addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮执行合体。');
         } else {
           document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
           addLog('info', '图层 2 已就绪，请继续在左侧拖入或点击导入图层 1 (实体道具)');
@@ -1430,8 +1438,8 @@
           applyZoom();
           addLog('success', `图层 1 [${file.name}] 载入就绪`);
           if (state.layer2Base64) {
-            addLog('info', '双图层均已就绪，立即执行双层合体生成...');
-            await processSingle(`合体：${file.name}`, state.layer1Base64);
+            document.getElementById('item-title-meta').innerText = '• 双图层已就绪 (调参后点击【开始生成】)';
+            addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮执行合体。');
           } else {
             document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
             addLog('info', '图层 1 已就绪，请继续在右侧拖入或点击导入图层 2 (发光特效)');
@@ -1454,8 +1462,8 @@
           document.getElementById('lbl-l2-status').innerText = `已载入: ${file.name}`;
           addLog('success', `图层 2 [${file.name}] 载入就绪`);
           if (state.layer1Base64) {
-            addLog('info', '双图层均已就绪，立即执行双层合体生成...');
-            await processSingle(`合体：${file.name}`, state.layer1Base64);
+            document.getElementById('item-title-meta').innerText = '• 双图层已就绪 (调参后点击【开始生成】)';
+            addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮执行合体。');
           } else {
             document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
             addLog('info', '图层 2 已就绪，请继续在左侧拖入或点击导入图层 1 (实体道具)');
@@ -1615,16 +1623,28 @@
         addLog('info', `正在读取本地文件: ${file.name} (${(file.size/1024).toFixed(1)} KB, 类型: ${file.type || 'image'})...`);
         try {
           const base64 = await fileToBase64(file);
-          addLog('success', `本地文件读取成功 (Base64 就绪)`);
           state.batchItems = [];
           batchTray.style.display = 'none';
           btnDownloadBatchZip.style.display = 'none';
           state.currentRawBase64 = base64;
           state.currentNativeBase64 = null;
           imgOriginal.src = base64;
+          imgPixel.src = '';
+          document.getElementById('raw-res-meta').innerText = '读取中...';
+          document.getElementById('pixel-res-meta').innerText = '-';
+          document.getElementById('meta-time').innerText = '-';
+          document.getElementById('meta-colors').innerText = '-';
+          document.getElementById('item-title-meta').innerText = `• ${file.name} (已载入，调参后点击【开始生成】)`;
+
+          const tempImg = new Image();
+          tempImg.onload = () => {
+            document.getElementById('raw-res-meta').innerText = `${tempImg.naturalWidth} × ${tempImg.naturalHeight}`;
+          };
+          tempImg.src = base64;
+
           applyZoom();
-          addLog('info', `自动发起像素化处理: 模式=${state.mode}, 目标尺寸=${state.targetSize}px, 调色板=${state.colorCount}色...`);
-          await processSingle(file.name, base64);
+          addLog('success', `图片 [${file.name}] 已成功载入左侧！请在左侧调整目标分辨率与参数，调整完毕后点击【⚡ 开始生成 / 应用新参数】按钮开始处理。`);
+          highlightRunButton();
         } catch (err) {
           addLog('error', `文件读取或处理异常: ${err.message}`);
           console.error(err);
@@ -1649,13 +1669,23 @@
           }
           renderBatchTray();
           selectBatchItem(0);
-          addLog('info', `批量队列已就绪 (${fileArray.length} 张)，开始自动转换...`);
-          await processBatchQueue();
+          imgPixel.src = '';
+          document.getElementById('item-title-meta').innerText = `• 共 ${fileArray.length} 张图片已导入 (调参后点击【开始生成】)`;
+          addLog('success', `批量队列已就绪 (${fileArray.length} 张图片)！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮开始批量处理。`);
+          highlightRunButton();
         } catch (err) {
           addLog('error', `批量读取异常: ${err.message}`);
         } finally {
           fileInput.value = '';
         }
+      }
+    }
+
+    function highlightRunButton() {
+      const btn = document.getElementById('btn-run-process');
+      if (btn) {
+        btn.classList.add('pulse-ready');
+        setTimeout(() => btn.classList.remove('pulse-ready'), 3500);
       }
     }
 
@@ -1789,8 +1819,13 @@
         return;
       }
       if (state.currentRawBase64) {
-        addLog('info', '应用新参数重新生成像素图...');
-        processSingle(document.getElementById('item-title-meta').innerText.replace('• ', '') || 'image.png', state.currentRawBase64);
+        let cleanName = document.getElementById('item-title-meta').innerText
+          .replace('• ', '')
+          .replace(/\s*\(已就绪.*?\)/g, '')
+          .replace(/\s*\(已载入.*?\)/g, '')
+          .trim() || 'image.png';
+        addLog('info', `应用新参数开始生成像素图: [${cleanName}]...`);
+        processSingle(cleanName, state.currentRawBase64);
       }
     }
 
