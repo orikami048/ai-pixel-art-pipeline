@@ -812,6 +812,31 @@
 
         <!-- 实体专属控制组 (Solid Controls) -->
         <div id="solid-controls-group">
+          <!-- 抠图与边缘净化模式选项 -->
+          <div class="form-group" style="margin-bottom: 14px;">
+            <div class="form-label">
+              <span>抠图净化模式</span>
+              <span class="value-badge" id="lbl-mask-mode">Alpha 容差分离</span>
+            </div>
+            <div class="capsule-group" style="grid-template-columns: 1fr 1fr; gap: 8px;">
+              <button class="capsule-btn active" data-mask="tolerance" id="btn-mask-tolerance">✨ Alpha 容差分离</button>
+              <button class="capsule-btn" data-mask="single" id="btn-mask-single">🎯 单一主体连通增强</button>
+            </div>
+            <div id="mask-mode-desc" class="switch-subtext" style="margin-top: 6px; line-height: 1.4;">
+              💡 容差模式：保留光晕、多角色序列帧与断连粒子（post_process_mask=False）。
+            </div>
+          </div>
+
+          <!-- Alpha 剔除阈值滑块 -->
+          <div class="form-group" style="margin-bottom: 14px;">
+            <div class="form-label">
+              <span>Alpha 判定阈值</span>
+              <span class="value-badge" id="lbl-alpha-thresh">≥ 100</span>
+            </div>
+            <input type="range" id="range-alpha-thresh" min="50" max="180" step="5" value="100">
+            <div class="switch-subtext" style="margin-top: 4px;">容差分离默认 100；连通增强默认 120 (可按需微调)</div>
+          </div>
+
           <!-- 1px 正交实体黑描边 -->
           <div class="switch-row">
             <div>
@@ -1124,6 +1149,9 @@
       targetSize: 96,
       colorCount: 32,
       removeBg: true,
+      maskMode: 'tolerance', // 'tolerance' | 'single'
+      postProcessMask: false,
+      alphaThreshold: 100,
       applyOutline: true,
       outlineColor: '#12141a',
       noiseArea: 18,
@@ -1296,6 +1324,32 @@
     document.getElementById('range-colors').addEventListener('input', (e) => {
       state.colorCount = parseInt(e.target.value);
       document.getElementById('lbl-colors').innerText = `${state.colorCount} 色`;
+    });
+
+    document.querySelectorAll('.capsule-btn[data-mask]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.capsule-btn[data-mask]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.maskMode = btn.dataset.mask;
+        if (state.maskMode === 'single') {
+          state.postProcessMask = true;
+          state.alphaThreshold = 120;
+          document.getElementById('lbl-mask-mode').innerText = '连通增强 (alpha≥120)';
+          document.getElementById('mask-mode-desc').innerText = '🎯 连通增强：post_process_mask=True（强制寻找最大单一连通块并形态学腐蚀，alpha≥120），适合单体武器/道具。';
+        } else {
+          state.postProcessMask = false;
+          state.alphaThreshold = 100;
+          document.getElementById('lbl-mask-mode').innerText = 'Alpha 容差分离';
+          document.getElementById('mask-mode-desc').innerText = '💡 容差模式：保留半透明光晕、多角色序列帧与断连粒子（post_process_mask=False），避免断裂误切。';
+        }
+        document.getElementById('range-alpha-thresh').value = state.alphaThreshold;
+        document.getElementById('lbl-alpha-thresh').innerText = `≥ ${state.alphaThreshold}`;
+      });
+    });
+
+    document.getElementById('range-alpha-thresh').addEventListener('input', (e) => {
+      state.alphaThreshold = parseInt(e.target.value);
+      document.getElementById('lbl-alpha-thresh').innerText = `≥ ${state.alphaThreshold}`;
     });
 
     document.getElementById('chk-outline').addEventListener('change', (e) => {
@@ -1816,6 +1870,8 @@
           target_size: state.targetSize,
           color_count: state.colorCount,
           remove_bg: state.removeBg,
+          post_process_mask: state.postProcessMask,
+          alpha_threshold: state.alphaThreshold,
           apply_outline: state.applyOutline,
           outline_color: hexToRgb(state.outlineColor),
           noise_area: state.noiseArea,

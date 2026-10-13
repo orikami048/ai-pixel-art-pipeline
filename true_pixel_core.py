@@ -75,7 +75,9 @@ def process_image(
     apply_outline: bool = True,
     outline_color: Tuple[int, int, int] = (18, 20, 26),
     noise_filter_area: int = 18,
-    erosion_iter: int = 1
+    erosion_iter: int = 1,
+    post_process_mask: bool = False,
+    alpha_threshold: int = 100
 ) -> Tuple[Image.Image, Image.Image]:
     """
     Main processing pipeline.
@@ -93,29 +95,30 @@ def process_image(
     # 1. Background removal
     if remove_bg:
         session = get_rembg_session()
-        # post_process_mask=False 避免大面积连通域形态学腐蚀吃掉发光光环与火焰
-        nobg = rembg.remove(raw_rgba, session=session, post_process_mask=False)
+        nobg = rembg.remove(raw_rgba, session=session, post_process_mask=post_process_mask)
         arr = np.array(nobg)
 
         # 智能色彩保底保护 (Smart Foreground Rescue)：
-        # 当原图具有统一纯色/暗色背景，但 AI 抠图模型将强光晕/角色误判为背景吃掉时，自动基于背景色差恢复前景
-        raw_arr = np.array(raw_rgba)
-        corner_pixels = np.vstack([
-            raw_arr[:15, :15, :3].reshape(-1, 3),
-            raw_arr[:15, -15:, :3].reshape(-1, 3),
-            raw_arr[-15:, :15, :3].reshape(-1, 3),
-            raw_arr[-15:, -15:, :3].reshape(-1, 3)
-        ])
-        bg_color = np.median(corner_pixels, axis=0)
-        # 背景一致性校验：四个角标准差较低说明是统一纯色/中性背景
-        bg_std = np.std(corner_pixels, axis=0).mean()
-        if bg_std < 25:
-            color_dist = np.linalg.norm(raw_arr[:, :, :3] - bg_color, axis=2)
-            # 色差显著大于背景且被 rembg 误降透明度/清零RGB的像素，予以保底唤醒并恢复原色
-            mistakenly_erased = (color_dist > 25) & (arr[:, :, 3] < 120)
-            if np.any(mistakenly_erased):
-                arr[mistakenly_erased, :3] = raw_arr[mistakenly_erased, :3]
-                arr[mistakenly_erased, 3] = np.clip(color_dist[mistakenly_erased] * 5, 180, 255).astype(np.uint8)
+        # 当处于容差分离模式 (not post_process_mask) 时，若原图背景统一，
+        # AI 抠图容易将强光晕或连携断裂主体误判切除，自动基于背景色差保底唤醒
+        if not post_process_mask:
+            raw_arr = np.array(raw_rgba)
+            corner_pixels = np.vstack([
+                raw_arr[:15, :15, :3].reshape(-1, 3),
+                raw_arr[:15, -15:, :3].reshape(-1, 3),
+                raw_arr[-15:, :15, :3].reshape(-1, 3),
+                raw_arr[-15:, -15:, :3].reshape(-1, 3)
+            ])
+            bg_color = np.median(corner_pixels, axis=0)
+            # 背景一致性校验：四个角标准差较低说明是统一纯色/中性背景
+            bg_std = np.std(corner_pixels, axis=0).mean()
+            if bg_std < 25:
+                color_dist = np.linalg.norm(raw_arr[:, :, :3] - bg_color, axis=2)
+                # 色差显著大于背景且被 rembg 误降透明度/清零RGB的像素，予以保底唤醒并恢复原色
+                mistakenly_erased = (color_dist > 25) & (arr[:, :, 3] < 120)
+                if np.any(mistakenly_erased):
+                    arr[mistakenly_erased, :3] = raw_arr[mistakenly_erased, :3]
+                    arr[mistakenly_erased, 3] = np.clip(color_dist[mistakenly_erased] * 5, 180, 255).astype(np.uint8)
     else:
         arr = np.array(raw_rgba)
 
@@ -123,7 +126,7 @@ def process_image(
     has_alpha = np.any(arr[:, :, 3] < 255)
     if has_alpha:
         alpha = arr[:, :, 3]
-        mask = alpha >= 100
+        mask = alpha >= alpha_threshold
         alpha_clean = np.where(mask, 255, 0).astype(np.uint8)
 
         if erosion_iter > 0:

@@ -80,6 +80,8 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
             apply_outline = bool(data.get("apply_outline", True))
             outline_color = tuple(data.get("outline_color", [18, 20, 26]))
             noise_area = int(data.get("noise_area", 18))
+            post_process_mask = bool(data.get("post_process_mask", False))
+            alpha_threshold = int(data.get("alpha_threshold", 120 if post_process_mask else 100))
             glow_intensity = float(data.get("glow_intensity", 1.15))
             blend_mode = str(data.get("blend_mode", "additive"))
             offset_x = int(data.get("offset_x", 0))
@@ -115,7 +117,9 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
                     remove_bg=remove_bg,
                     apply_outline=apply_outline,
                     outline_color=outline_color,
-                    noise_filter_area=noise_area
+                    noise_filter_area=noise_area,
+                    post_process_mask=post_process_mask,
+                    alpha_threshold=alpha_threshold
                 )
 
                 vfx_native, _ = process_vfx_image(
@@ -171,7 +175,9 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
                     remove_bg=remove_bg,
                     apply_outline=apply_outline,
                     outline_color=outline_color,
-                    noise_filter_area=noise_area
+                    noise_filter_area=noise_area,
+                    post_process_mask=post_process_mask,
+                    alpha_threshold=alpha_threshold
                 )
                 extra_payload = {}
 
