@@ -327,11 +327,7 @@
     }
 
     .dropzone input[type="file"] {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
-      opacity: 0;
-      cursor: pointer;
-      z-index: 10;
+      display: none;
     }
 
     .dropzone > *:not(input[type="file"]) {
@@ -566,6 +562,54 @@
       background: #232e42;
       border-color: #4b5d7a;
     }
+
+    /* 实时运行日志与诊断面板 */
+    .log-console-panel {
+      background: #090d14;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      margin-top: 14px;
+      overflow: hidden;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .log-console-header {
+      background: #111722;
+      padding: 7px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .log-console-body {
+      max-height: 130px;
+      min-height: 60px;
+      overflow-y: auto;
+      padding: 8px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
+    .log-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      word-break: break-all;
+    }
+
+    .log-item .log-time {
+      color: #576579;
+      flex-shrink: 0;
+    }
+
+    .log-item.info .log-msg { color: #9bb0cc; }
+    .log-item.success .log-msg { color: #4ade80; }
+    .log-item.warn .log-msg { color: #facc15; }
+    .log-item.error .log-msg { color: #f87171; font-weight: bold; }
 
     /* 加载中动画遮罩 */
     .loading-overlay {
@@ -988,6 +1032,21 @@
             <button class="btn btn-secondary" id="btn-download-batch-zip" style="display:none;">📦 打包下载全部 (ZIP)</button>
           </div>
         </div>
+
+        <!-- 实时运行日志与诊断控制台 -->
+        <div class="log-console-panel" id="log-console-panel">
+          <div class="log-console-header">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#00f0ff; box-shadow:0 0 6px #00f0ff;"></span>
+              <span style="font-weight:600; font-size:12px; color:var(--text-main);">🖥️ 实时运行日志与诊断控制台</span>
+              <span id="log-status-badge" style="font-size:11px; color:var(--accent-cyan);">(就绪)</span>
+            </div>
+            <div style="display:flex; gap:6px;">
+              <button class="capsule-btn" id="btn-clear-logs" style="padding:2px 8px; font-size:11px;">清空日志</button>
+            </div>
+          </div>
+          <div class="log-console-body" id="log-console-body"></div>
+        </div>
       </div>
     </div>
   </main>
@@ -1110,6 +1169,50 @@
     const btnDownloadHd = document.getElementById('btn-download-hd');
     const btnDownloadBatchZip = document.getElementById('btn-download-batch-zip');
     const batchTray = document.getElementById('batch-tray');
+
+    // 实时日志与控制台诊断系统
+    function addLog(type, text) {
+      const consoleBody = document.getElementById('log-console-body');
+      const statusBadge = document.getElementById('log-status-badge');
+      if (!consoleBody) return;
+      
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+      
+      const item = document.createElement('div');
+      item.className = `log-item ${type}`;
+      
+      let icon = '🔹';
+      if (type === 'success') icon = '✅';
+      else if (type === 'warn') icon = '⚠️';
+      else if (type === 'error') icon = '❌';
+      
+      item.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="log-msg">${icon} ${text}</span>`;
+      consoleBody.appendChild(item);
+      consoleBody.scrollTop = consoleBody.scrollHeight;
+      
+      if (statusBadge) {
+        if (type === 'error') {
+          statusBadge.innerText = '(异常)';
+          statusBadge.style.color = '#f87171';
+        } else if (type === 'success') {
+          statusBadge.innerText = '(完成)';
+          statusBadge.style.color = '#4ade80';
+        } else {
+          statusBadge.innerText = '(运行中)';
+          statusBadge.style.color = 'var(--accent-cyan)';
+        }
+      }
+      console.log(`[TruePixel Log] [${type}] ${text}`);
+    }
+
+    if (document.getElementById('btn-clear-logs')) {
+      document.getElementById('btn-clear-logs').addEventListener('click', () => {
+        const consoleBody = document.getElementById('log-console-body');
+        if (consoleBody) consoleBody.innerHTML = '';
+        addLog('info', '控制台日志已清空');
+      });
+    }
 
     // 处理模式切换监听
     document.querySelectorAll('.capsule-btn[data-mode]').forEach(btn => {
@@ -1267,15 +1370,20 @@
       e.preventDefault();
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
-        state.layer1Base64 = await fileToBase64(files[0]);
-        document.getElementById('lbl-l1-status').innerText = `已载入: ${files[0].name}`;
+        const file = files[0];
+        addLog('info', `图层 1 (实体道具) 拖入文件: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+        state.layer1Base64 = await fileToBase64(file);
+        document.getElementById('lbl-l1-status').innerText = `已载入: ${file.name}`;
         imgOriginal.src = state.layer1Base64;
         state.currentRawBase64 = state.layer1Base64;
         applyZoom();
+        addLog('success', `图层 1 [${file.name}] 载入就绪`);
         if (state.layer2Base64) {
-          await processSingle(`合体：${files[0].name}`, state.layer1Base64);
+          addLog('info', '双图层均已就绪，立即执行双层合体生成...');
+          await processSingle(`合体：${file.name}`, state.layer1Base64);
         } else {
           document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
+          addLog('info', '图层 1 已就绪，请继续在右侧拖入或点击导入图层 2 (发光特效)');
         }
       }
     });
@@ -1284,55 +1392,80 @@
       e.preventDefault();
       const files = e.dataTransfer.files;
       if (files && files.length > 0) {
-        state.layer2Base64 = await fileToBase64(files[0]);
-        document.getElementById('lbl-l2-status').innerText = `已载入: ${files[0].name}`;
+        const file = files[0];
+        addLog('info', `图层 2 (发光特效) 拖入文件: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+        state.layer2Base64 = await fileToBase64(file);
+        document.getElementById('lbl-l2-status').innerText = `已载入: ${file.name}`;
+        addLog('success', `图层 2 [${file.name}] 载入就绪`);
         if (state.layer1Base64) {
-          await processSingle(`合体：${files[0].name}`, state.layer1Base64);
+          addLog('info', '双图层均已就绪，立即执行双层合体生成...');
+          await processSingle(`合体：${file.name}`, state.layer1Base64);
         } else {
           document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
+          addLog('info', '图层 2 已就绪，请继续在左侧拖入或点击导入图层 1 (实体道具)');
         }
       }
     });
 
-    dropzoneL1.addEventListener('click', (e) => {
-      const input = document.getElementById('file-layer1');
-      if (e.target !== input) input.click();
+    dropzoneL1.addEventListener('click', () => {
+      addLog('info', '点击图层 1 上传框，唤起文件选择窗口...');
+      document.getElementById('file-layer1').click();
     });
 
-    dropzoneL2.addEventListener('click', (e) => {
-      const input = document.getElementById('file-layer2');
-      if (e.target !== input) input.click();
+    dropzoneL2.addEventListener('click', () => {
+      addLog('info', '点击图层 2 上传框，唤起文件选择窗口...');
+      document.getElementById('file-layer2').click();
     });
 
     document.getElementById('file-layer1').addEventListener('change', async (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        const file = e.target.files[0];
-        state.layer1Base64 = await fileToBase64(file);
-        document.getElementById('lbl-l1-status').innerText = `已载入: ${file.name}`;
-        imgOriginal.src = state.layer1Base64;
-        state.currentRawBase64 = state.layer1Base64;
-        applyZoom();
-        if (state.layer2Base64) {
-          await processSingle(`合体：${file.name}`, state.layer1Base64);
-        } else {
-          document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        addLog('info', `图层 1 (实体道具) 确认选中: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+        try {
+          state.layer1Base64 = await fileToBase64(file);
+          document.getElementById('lbl-l1-status').innerText = `已载入: ${file.name}`;
+          imgOriginal.src = state.layer1Base64;
+          state.currentRawBase64 = state.layer1Base64;
+          applyZoom();
+          addLog('success', `图层 1 [${file.name}] 载入就绪`);
+          if (state.layer2Base64) {
+            addLog('info', '双图层均已就绪，立即执行双层合体生成...');
+            await processSingle(`合体：${file.name}`, state.layer1Base64);
+          } else {
+            document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
+            addLog('info', '图层 1 已就绪，请继续在右侧拖入或点击导入图层 2 (发光特效)');
+          }
+        } catch (err) {
+          addLog('error', `图层 1 读取失败: ${err.message}`);
+        } finally {
+          e.target.value = '';
         }
       }
-      e.target.value = '';
     });
 
     document.getElementById('file-layer2').addEventListener('change', async (e) => {
-      if (e.target.files && e.target.files.length > 0) {
-        const file = e.target.files[0];
-        state.layer2Base64 = await fileToBase64(file);
-        document.getElementById('lbl-l2-status').innerText = `已载入: ${file.name}`;
-        if (state.layer1Base64) {
-          await processSingle(`合体：${file.name}`, state.layer1Base64);
-        } else {
-          document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
+      const files = e.target.files;
+      if (files && files.length > 0) {
+        const file = files[0];
+        addLog('info', `图层 2 (发光特效) 确认选中: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+        try {
+          state.layer2Base64 = await fileToBase64(file);
+          document.getElementById('lbl-l2-status').innerText = `已载入: ${file.name}`;
+          addLog('success', `图层 2 [${file.name}] 载入就绪`);
+          if (state.layer1Base64) {
+            addLog('info', '双图层均已就绪，立即执行双层合体生成...');
+            await processSingle(`合体：${file.name}`, state.layer1Base64);
+          } else {
+            document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
+            addLog('info', '图层 2 已就绪，请继续在左侧拖入或点击导入图层 1 (实体道具)');
+          }
+        } catch (err) {
+          addLog('error', `图层 2 读取失败: ${err.message}`);
+        } finally {
+          e.target.value = '';
         }
       }
-      e.target.value = '';
     });
 
     // 资产生图规范指南弹窗逻辑
@@ -1431,18 +1564,27 @@
       });
     });
 
-    dropzone.addEventListener('click', (e) => {
-      if (e.target !== fileInput) fileInput.click();
+    dropzone.addEventListener('click', () => {
+      addLog('info', '点击主上传框，唤起文件选择窗口...');
+      fileInput.click();
     });
 
     dropzone.addEventListener('drop', (e) => {
       e.preventDefault();
       const files = e.dataTransfer.files;
-      if (files && files.length > 0) handleFiles(files);
+      if (files && files.length > 0) {
+        addLog('info', `检测到拖入 ${files.length} 个文件`);
+        handleFiles(Array.from(files));
+      }
     });
 
     fileInput.addEventListener('change', (e) => {
-      if (e.target.files && e.target.files.length > 0) handleFiles(e.target.files);
+      const files = e.target.files;
+      addLog('info', `文件选择完成: 选中 ${files ? files.length : 0} 个文件`);
+      if (files && files.length > 0) {
+        // 关键：立即转换为纯 JavaScript 数组，避免后续操作使 live FileList 置空！
+        handleFiles(Array.from(files));
+      }
     });
 
     // 剪贴板 Ctrl+V 粘贴
@@ -1452,6 +1594,7 @@
       for (const item of items) {
         if (item.type.indexOf('image') !== -1) {
           const file = item.getAsFile();
+          addLog('info', `检测到剪贴板粘贴截图: ${file.name || 'clipboard.png'}`);
           handleFiles([file]);
           break;
         }
@@ -1460,38 +1603,59 @@
 
     // 处理选中的文件
     async function handleFiles(files) {
-      if (!files || files.length === 0) return;
-      fileInput.value = '';
-      if (files.length === 1) {
-        const file = files[0];
-        const base64 = await fileToBase64(file);
-        state.batchItems = [];
-        batchTray.style.display = 'none';
-        btnDownloadBatchZip.style.display = 'none';
-        state.currentRawBase64 = base64;
-        state.currentNativeBase64 = null;
-        imgOriginal.src = base64;
-        applyZoom();
-        // 自动立即执行像素化生成
-        await processSingle(file.name, base64);
+      if (!files || files.length === 0) {
+        addLog('warn', '未检测到文件输入');
+        return;
+      }
+      const fileArray = Array.from(files);
+      addLog('info', `开始解析 ${fileArray.length} 个文件...`);
+
+      if (fileArray.length === 1) {
+        const file = fileArray[0];
+        addLog('info', `正在读取本地文件: ${file.name} (${(file.size/1024).toFixed(1)} KB, 类型: ${file.type || 'image'})...`);
+        try {
+          const base64 = await fileToBase64(file);
+          addLog('success', `本地文件读取成功 (Base64 就绪)`);
+          state.batchItems = [];
+          batchTray.style.display = 'none';
+          btnDownloadBatchZip.style.display = 'none';
+          state.currentRawBase64 = base64;
+          state.currentNativeBase64 = null;
+          imgOriginal.src = base64;
+          applyZoom();
+          addLog('info', `自动发起像素化处理: 模式=${state.mode}, 目标尺寸=${state.targetSize}px, 调色板=${state.colorCount}色...`);
+          await processSingle(file.name, base64);
+        } catch (err) {
+          addLog('error', `文件读取或处理异常: ${err.message}`);
+          console.error(err);
+        } finally {
+          fileInput.value = '';
+        }
       } else {
         // 多图批量处理
+        addLog('info', `正在导入 ${fileArray.length} 张图片到批量处理队列...`);
         state.batchItems = [];
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const b64 = await fileToBase64(file);
-          state.batchItems.push({
-            name: file.name,
-            rawBase64: b64,
-            nativeBase64: null,
-            preview4xBase64: null,
-            status: 'pending'
-          });
+        try {
+          for (let i = 0; i < fileArray.length; i++) {
+            const file = fileArray[i];
+            const b64 = await fileToBase64(file);
+            state.batchItems.push({
+              name: file.name,
+              rawBase64: b64,
+              nativeBase64: null,
+              preview4xBase64: null,
+              status: 'pending'
+            });
+          }
+          renderBatchTray();
+          selectBatchItem(0);
+          addLog('info', `批量队列已就绪 (${fileArray.length} 张)，开始自动转换...`);
+          await processBatchQueue();
+        } catch (err) {
+          addLog('error', `批量读取异常: ${err.message}`);
+        } finally {
+          fileInput.value = '';
         }
-        renderBatchTray();
-        selectBatchItem(0);
-        // 多图也自动开始批量转换队列
-        await processBatchQueue();
       }
     }
 
@@ -1572,10 +1736,13 @@
         loadingText.innerText = 'AI 正在深度去除背景并生成真像素调色板...';
       }
 
+      addLog('info', `📡 发起服务端转换: [${fileName}], 模式=${state.mode}, 目标=${state.targetSize}px, 调色板=${state.colorCount}色`);
+
       const t0 = performance.now();
       try {
         const res = await callProcessApi(base64);
         const t1 = performance.now();
+        const duration = Math.round(t1 - t0);
         state.currentNativeBase64 = res.native_base64;
         state.currentPreview4xBase64 = res.preview4x_base64;
         imgPixel.src = res.native_base64;
@@ -1597,10 +1764,13 @@
 
         document.getElementById('raw-res-meta').innerText = `${res.raw_width} × ${res.raw_height}`;
         document.getElementById('pixel-res-meta').innerText = `${res.target_size} × ${res.target_size} Px`;
-        document.getElementById('meta-time').innerText = `${Math.round(t1 - t0)} ms`;
+        document.getElementById('meta-time').innerText = `${duration} ms`;
         document.getElementById('meta-colors').innerText = `${res.actual_colors || state.colorCount} 色`;
         document.getElementById('meta-outline').innerText = state.mode === 'vfx' ? '无 (发光专用)' : (state.applyOutline ? '已生成 1px 闭合' : '无');
+
+        addLog('success', `✅ 转换成功！耗时 ${duration}ms, 成品 ${res.target_size}×${res.target_size} Px, 调色板 ${res.actual_colors || state.colorCount} 色`);
       } catch (err) {
+        addLog('error', `❌ 转换接口返回错误: ${err.message}`);
         alert('转换失败: ' + err.message);
       } finally {
         loadingOverlay.classList.remove('active');
@@ -1610,13 +1780,16 @@
     function reprocessCurrent() {
       if (state.mode === 'composite') {
         if (!state.layer1Base64 || !state.layer2Base64) {
+          addLog('warn', '双层合体模式需要同时载入图层 1 (实体道具) 与图层 2 (发光特效)');
           alert('双层合体模式需要同时载入图层 1 (实体道具) 与图层 2 (发光特效)！');
           return;
         }
+        addLog('info', '应用新参数重新计算双层合体...');
         processSingle('飞剑+剑气双层发光合体', state.layer1Base64);
         return;
       }
       if (state.currentRawBase64) {
+        addLog('info', '应用新参数重新生成像素图...');
         processSingle(document.getElementById('item-title-meta').innerText.replace('• ', '') || 'image.png', state.currentRawBase64);
       }
     }
@@ -1907,6 +2080,9 @@
         updateModalZoom();
       }
     });
+
+    // 引擎初始化日志
+    addLog('info', 'TruePixel 像素引擎初始化就绪，点击上传或拖入图片即可自动开始转换！');
   </script>
 </body>
 </html>
