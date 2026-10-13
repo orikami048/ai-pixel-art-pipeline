@@ -93,8 +93,28 @@ def process_image(
     # 1. Background removal
     if remove_bg:
         session = get_rembg_session()
-        nobg = rembg.remove(raw_rgba, session=session, post_process_mask=True)
+        # post_process_mask=False 避免大面积连通域形态学腐蚀吃掉发光光环与火焰
+        nobg = rembg.remove(raw_rgba, session=session, post_process_mask=False)
         arr = np.array(nobg)
+
+        # 智能色彩保底保护 (Smart Foreground Rescue)：
+        # 当原图具有统一纯色/暗色背景，但 AI 抠图模型将强光晕/角色误判为背景吃掉时，自动基于背景色差恢复前景
+        raw_arr = np.array(raw_rgba)
+        corner_pixels = np.vstack([
+            raw_arr[:15, :15, :3].reshape(-1, 3),
+            raw_arr[:15, -15:, :3].reshape(-1, 3),
+            raw_arr[-15:, :15, :3].reshape(-1, 3),
+            raw_arr[-15:, -15:, :3].reshape(-1, 3)
+        ])
+        bg_color = np.median(corner_pixels, axis=0)
+        # 背景一致性校验：四个角标准差较低说明是统一纯色/中性背景
+        bg_std = np.std(corner_pixels, axis=0).mean()
+        if bg_std < 25:
+            color_dist = np.linalg.norm(raw_arr[:, :, :3] - bg_color, axis=2)
+            # 色差显著大于背景且被 rembg 误降透明度的像素，予以保底唤醒
+            mistakenly_erased = (color_dist > 32) & (arr[:, :, 3] < 120)
+            if np.any(mistakenly_erased):
+                arr[mistakenly_erased, 3] = np.clip(color_dist[mistakenly_erased] * 5, 180, 255).astype(np.uint8)
     else:
         arr = np.array(raw_rgba)
 
@@ -102,7 +122,7 @@ def process_image(
     has_alpha = np.any(arr[:, :, 3] < 255)
     if has_alpha:
         alpha = arr[:, :, 3]
-        mask = alpha >= 120
+        mask = alpha >= 100
         alpha_clean = np.where(mask, 255, 0).astype(np.uint8)
 
         if erosion_iter > 0:
