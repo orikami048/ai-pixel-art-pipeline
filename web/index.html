@@ -2014,29 +2014,54 @@
       document.getElementById('lbl-offset-x').innerText = `${state.offsetX} px`;
       document.getElementById('lbl-offset-y').innerText = `${state.offsetY} px`;
 
-      updateLiveComposite();
+      scheduleLiveCompositeUpdate();
     });
 
     window.addEventListener('mouseup', () => {
       if (isDraggingLayer) {
         isDraggingLayer = false;
         pixelFrame.classList.remove('dragging');
+        renderLiveComposite(); // 确保松开鼠标时立即生成最终精确画面
       }
     });
 
+    // 高性能持久化离屏 Canvas，避免每帧反复 GC 与 GPU 显存泄漏
+    let reusableCanvas = null;
+    let liveCompositeRaf = null;
+
+    function scheduleLiveCompositeUpdate() {
+      if (liveCompositeRaf) return;
+      liveCompositeRaf = requestAnimationFrame(() => {
+        liveCompositeRaf = null;
+        renderLiveComposite();
+      });
+    }
+
     function updateLiveComposite() {
+      scheduleLiveCompositeUpdate();
+    }
+
+    function renderLiveComposite() {
       if (state.mode !== 'composite' || !state.compositeLayer1Img || !state.compositeLayer2Img) return;
-      const canvas = document.createElement('canvas');
-      canvas.width = state.targetSize;
-      canvas.height = state.targetSize;
-      const ctx = canvas.getContext('2d');
+      
+      const size = state.targetSize || 96;
+      if (!reusableCanvas) {
+        reusableCanvas = document.createElement('canvas');
+      }
+      if (reusableCanvas.width !== size || reusableCanvas.height !== size) {
+        reusableCanvas.width = size;
+        reusableCanvas.height = size;
+      }
+
+      const ctx = reusableCanvas.getContext('2d', { willReadFrequently: false });
       ctx.imageSmoothingEnabled = false;
+      ctx.clearRect(0, 0, size, size);
 
       const isSolidTop = (state.layerOrder === 'solid_on_top');
 
       function drawSolid() {
         ctx.globalCompositeOperation = 'source-over';
-        ctx.drawImage(state.compositeLayer1Img, 0, 0, state.targetSize, state.targetSize);
+        ctx.drawImage(state.compositeLayer1Img, 0, 0, size, size);
       }
 
       function drawVfx() {
@@ -2047,7 +2072,7 @@
         } else {
           ctx.globalCompositeOperation = 'source-over';
         }
-        ctx.drawImage(state.compositeLayer2Img, state.offsetX, state.offsetY, state.targetSize, state.targetSize);
+        ctx.drawImage(state.compositeLayer2Img, state.offsetX, state.offsetY, size, size);
       }
 
       if (isSolidTop) {
@@ -2058,7 +2083,7 @@
         drawVfx();
       }
 
-      const liveUrl = canvas.toDataURL();
+      const liveUrl = reusableCanvas.toDataURL('image/png');
       imgPixel.src = liveUrl;
       state.currentNativeBase64 = liveUrl;
     }
