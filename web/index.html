@@ -1243,6 +1243,7 @@
         document.getElementById('layer-transform-wrap').style.display = isComposite ? 'block' : 'none';
         document.getElementById('drag-hint-badge').style.display = isComposite ? 'flex' : 'none';
         document.getElementById('pixel-frame').classList.toggle('draggable', isComposite);
+        imgPixel.style.cursor = isComposite ? 'grab' : 'zoom-in';
 
         document.getElementById('dropzone').style.display = isComposite ? 'none' : 'block';
         document.getElementById('composite-dropzone-wrap').style.display = isComposite ? 'grid' : 'none';
@@ -1980,6 +1981,7 @@
     // 前端 60FPS 实时合体渲染与鼠标自由拖拽
     const pixelFrame = document.getElementById('pixel-frame');
     let isDraggingLayer = false;
+    let hasDragged = false;
     let dragStartX = 0;
     let dragStartY = 0;
     let dragInitOffsetX = 0;
@@ -1989,6 +1991,7 @@
       if (state.mode !== 'composite') return;
       e.preventDefault();
       isDraggingLayer = true;
+      hasDragged = false;
       dragStartX = e.clientX;
       dragStartY = e.clientY;
       dragInitOffsetX = state.offsetX;
@@ -1999,6 +2002,9 @@
     window.addEventListener('mousemove', (e) => {
       if (!isDraggingLayer) return;
       e.preventDefault();
+      if (Math.abs(e.clientX - dragStartX) > 2 || Math.abs(e.clientY - dragStartY) > 2) {
+        hasDragged = true;
+      }
       const curRenderWidth = imgPixel.clientWidth || 340;
       const zoomRatio = curRenderWidth / (state.targetSize || 96);
       const dx = Math.round((e.clientX - dragStartX) / zoomRatio);
@@ -2022,6 +2028,8 @@
         isDraggingLayer = false;
         pixelFrame.classList.remove('dragging');
         renderLiveComposite(); // 确保松开鼠标时立即生成最终精确画面
+        // 延时 200ms 清除 hasDragged，阻断紧随 mouseup 之后的 click 原生事件冒泡
+        setTimeout(() => { hasDragged = false; }, 200);
       }
     });
 
@@ -2119,8 +2127,16 @@
     }
 
     document.getElementById('btn-open-modal').addEventListener('click', openModal);
-    imgPixel.addEventListener('click', openModal);
-    imgPixel.style.cursor = 'zoom-in';
+    imgPixel.addEventListener('click', (e) => {
+      // 在双层合体模式下，画布专用于鼠标自由拖拽排版，绝不误触放大弹窗；拖拽位移后也坚决阻断
+      if (state.mode === 'composite' || hasDragged) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      openModal();
+    });
+    imgPixel.style.cursor = state.mode === 'composite' ? 'grab' : 'zoom-in';
 
     document.getElementById('btn-close-modal').addEventListener('click', closeModal);
     previewModal.addEventListener('click', (e) => {
