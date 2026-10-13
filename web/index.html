@@ -1130,30 +1130,9 @@
           <div style="font-size:14px; font-weight:600; color:var(--accent-cyan);" id="loading-text">AI 正在深度去除背景并生成像素调色板...</div>
         </div>
 
-        <div class="preview-header">
-          <div style="font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px;">
-            <span>🔍 实时效果对比</span>
-            <span style="font-size:12px; color:var(--text-muted); font-weight:normal;" id="item-title-meta"></span>
-          </div>
-          <div class="zoom-toolbar">
-            <span style="font-size:11px; color:var(--text-muted); margin-right:4px;">缩放与拉伸:</span>
-            <button class="zoom-btn active" data-zoom="fit" id="btn-zoom-fit">适应 (Fit)</button>
-            <button class="zoom-btn" data-zoom="stretch" id="btn-zoom-stretch" title="铺满拉伸画布">⤢ 拉伸铺满</button>
-            <button class="zoom-btn" id="btn-zoom-out" title="缩小">- 缩小</button>
-            <span id="lbl-zoom-val" style="font-size:11px; color:var(--accent-cyan); font-family:monospace; min-width:42px; text-align:center;">100%</span>
-            <button class="zoom-btn" id="btn-zoom-in" title="放大">+ 放大</button>
-            <button class="zoom-btn" data-zoom="1">1x</button>
-            <button class="zoom-btn" data-zoom="2">2x</button>
-            <button class="zoom-btn" data-zoom="4">4x</button>
-            <button class="zoom-btn" data-zoom="8">8x</button>
-            <button class="zoom-btn" id="btn-toggle-grid" style="margin-left:4px;" title="开启/关闭像素网格对齐线">▦ 像素网格</button>
-          </div>
-        </div>
-
-        <!-- 像素对比小提示 -->
-        <div style="font-size: 11px; color: var(--text-muted); background: #0c121e; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
-          <span>💡 <strong>视口操控</strong>：支持鼠标滚轮自由放大缩小、点击【⤢ 拉伸铺满】充满视口，或选择 1x~8x 倍率检视。</span>
-          <span style="color: var(--accent-gold);" id="scale-factor-badge">当前缩放: 等大 1:1 对比 (100%)</span>
+        <div class="preview-header" style="justify-content: flex-end; padding-bottom: 6px;">
+          <span id="item-title-meta" style="display:none;"></span>
+          <button class="zoom-btn" id="btn-toggle-grid" style="border: 1px solid var(--border-color); background: #0f141d;" title="开启/关闭像素网格对齐线">▦ 像素网格</button>
         </div>
 
         <div class="views-container">

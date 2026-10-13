@@ -23,12 +23,15 @@
 内置零外部重量级依赖（无需安装 Node.js/Vue，直接基于 Python 原生轻量服务）的沉浸式暗黑游戏风 Web 控制台。
 
 ### 一键启动
+
 ```bash
 python app.py
 ```
+
 终端启动后在浏览器打开：**`http://localhost:7860`**
 
 ### 前端功能特性
+
 - **🖱️ 拖拽即生成**：支持单图直接拖拽到画布、剪贴板粘贴或文件选择，毫秒级即时处理。
 - **📦 批量处理托盘**：支持多张图片同时拖入，排队批量转换并一键打包下载 ZIP。
 - **🎛️ 实时参数调优**：
@@ -57,37 +60,43 @@ crisp pixelated edges, authentic pixel art game asset
 
 ### 经典品类提示词范例
 
-| 资产类别 | 推荐 Prompt 片段 | 推荐目标分辨率 |
-| :--- | :--- | :--- |
+| 资产类别            | 推荐 Prompt 片段                                                                                                                                                                   | 推荐目标分辨率           |
+| :-------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---------------- |
 | **武器 (Weapon)** | `16-bit retro pixel art game sprite of a heavy steel greatsword with a glowing blue gem in the hilt, dark background, clean solid 1px pixel outline, authentic retro RPG item` | `64×64` 或 `96×96` |
-| **防具 (Armor)** | `16-bit retro pixel art game icon of an ornate knight chestplate armor, golden trims, polished steel plate, dark neutral background, crisp pixelated edges` | `64×64` |
-| **药水 (Potion)** | `16-bit retro pixel art potion bottle filled with swirling red health elixir, glass cork, vibrant bubbles, dark neutral background, clean pixel outline` | `32×32` 或 `48×48` |
-| **宝箱 (Chest)** | `16-bit retro pixel art treasure chest, wooden planks with sturdy iron bands, glowing golden keyhole, dark background, crisp edges` | `48×48` 或 `64×64` |
-| **法杖 (Staff)** | `16-bit retro pixel art wizard staff, twisted dark wood topped with a floating arcane purple crystal orb, emitting slight sparks, dark background` | `64×64` 或 `96×96` |
+| **防具 (Armor)**  | `16-bit retro pixel art game icon of an ornate knight chestplate armor, golden trims, polished steel plate, dark neutral background, crisp pixelated edges`                    | `64×64`           |
+| **药水 (Potion)** | `16-bit retro pixel art potion bottle filled with swirling red health elixir, glass cork, vibrant bubbles, dark neutral background, clean pixel outline`                       | `32×32` 或 `48×48` |
+| **宝箱 (Chest)**  | `16-bit retro pixel art treasure chest, wooden planks with sturdy iron bands, glowing golden keyhole, dark background, crisp edges`                                            | `48×48` 或 `64×64` |
+| **法杖 (Staff)**  | `16-bit retro pixel art wizard staff, twisted dark wood topped with a floating arcane purple crystal orb, emitting slight sparks, dark background`                             | `64×64` 或 `96×96` |
 
 ---
 
 ## 🚀 快速开始
 
 ### 1. 安装环境依赖
+
 ```bash
 pip install -r requirements.txt
 ```
+
 *(主要包含 `rembg`, `opencv-python`, `pillow`, `numpy`, `onnxruntime`)*
 
 ### 2. 启动图形化 Web UI
+
 ```bash
 python app.py
 ```
+
 访问 `http://localhost:7860` 体验完整交互。
 
 ### 3. 命令行 (CLI) 批处理与单图转换
+
 ```bash
 # 单图转换（自动去背、居中缩放到 64px、限定 24 色并添加 1px 闭合描边）
 python true_pixel.py --input raw_icon.png --output clean_icon.png --size 64 --colors 24
 ```
 
 ### 4. 角色动画序列大图整合 (Sprite Sheet)
+
 ```bash
 python build_outlined_spritesheet.py
 ```
@@ -112,4 +121,5 @@ ai-pixel-art-pipeline/
 ---
 
 ## 📄 License
+
 MIT License
