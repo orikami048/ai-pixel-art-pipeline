@@ -665,7 +665,8 @@
         <p>Production-Grade AI to True-Pixel Game Asset Pipeline</p>
       </div>
     </div>
-    <div class="header-links">
+    <div class="header-links" style="display:flex; gap:12px; align-items:center;">
+      <button class="btn btn-secondary" id="btn-open-guide-modal" style="padding:6px 14px; font-size:12px; border-color:#2a3b54; color:var(--accent-cyan);">📖 资产生图规范与底色指南</button>
       <a href="https://github.com/orikami048/ai-pixel-art-pipeline" target="_blank">⭐ GitHub 仓库</a>
     </div>
   </header>
@@ -676,7 +677,20 @@
       <div class="panel-card">
         <div class="panel-title">⚙️ 像素化核心参数</div>
 
-        <!-- 分辨率选择 -->
+        <!-- 1. 处理模式切换 -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>处理模式</span>
+            <span class="value-badge" id="lbl-mode">📦 实体道具</span>
+          </div>
+          <div class="capsule-group" style="grid-template-columns: repeat(3, 1fr);">
+            <button class="capsule-btn active" data-mode="solid">📦 实体道具</button>
+            <button class="capsule-btn" data-mode="vfx">✨ 发光特效</button>
+            <button class="capsule-btn" data-mode="composite">⚔️ 双层合体</button>
+          </div>
+        </div>
+
+        <!-- 2. 分辨率选择 -->
         <div class="form-group">
           <div class="form-label">
             <span>目标分辨率</span>
@@ -694,7 +708,7 @@
           </div>
         </div>
 
-        <!-- 调色板颜色数 -->
+        <!-- 3. 调色板颜色数 -->
         <div class="form-group">
           <div class="form-label">
             <span>复古调色板颜色数</span>
@@ -703,49 +717,77 @@
           <input type="range" id="range-colors" min="8" max="128" step="4" value="32">
         </div>
 
-        <!-- AI 背景移除开关 -->
-        <div class="switch-row">
-          <div>
-            <div class="switch-label">AI 深度背景抠图</div>
-            <div class="switch-subtext">去除杂色背景并边缘羽化侵蚀</div>
+        <!-- 实体专属控制组 (Solid Controls) -->
+        <div id="solid-controls-group">
+          <!-- AI 背景移除开关 -->
+          <div class="switch-row">
+            <div>
+              <div class="switch-label">AI 深度背景抠图</div>
+              <div class="switch-subtext">去除杂色背景并边缘羽化侵蚀</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="chk-rembg" checked>
+              <span class="slider"></span>
+            </label>
           </div>
-          <label class="switch">
-            <input type="checkbox" id="chk-rembg" checked>
-            <span class="slider"></span>
-          </label>
+
+          <!-- 1px 正交实体黑描边 -->
+          <div class="switch-row" style="margin-top: 12px;">
+            <div>
+              <div class="switch-label">1px 正交闭合描边</div>
+              <div class="switch-subtext">纯正独立游戏复古像素硬轮廓</div>
+            </div>
+            <label class="switch">
+              <input type="checkbox" id="chk-outline" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
+
+          <!-- 描边颜色 -->
+          <div class="form-group" style="margin-top: 12px;" id="outline-color-group">
+            <div class="form-label">
+              <span>描边颜色</span>
+              <span class="value-badge" id="lbl-outline-color">#12141a</span>
+            </div>
+            <div class="color-picker-wrap">
+              <input type="color" id="picker-outline-color" value="#12141a">
+              <span style="font-size:12px; color:var(--text-muted);">推荐纯黑或深墨色</span>
+            </div>
+          </div>
+
+          <!-- 孤立噪点过滤 -->
+          <div class="form-group" style="margin-top: 16px;">
+            <div class="form-label">
+              <span>杂色孤立微粒过滤</span>
+              <span class="value-badge" id="lbl-noise">18 px</span>
+            </div>
+            <input type="range" id="range-noise" min="0" max="50" step="2" value="18">
+          </div>
         </div>
 
-        <!-- 1px 正交实体黑描边 -->
-        <div class="switch-row" style="margin-top: 12px;">
-          <div>
-            <div class="switch-label">1px 正交闭合描边</div>
-            <div class="switch-subtext">纯正独立游戏复古像素硬轮廓</div>
+        <!-- 特效/合体专属控制组 (VFX & Composite Controls) -->
+        <div id="vfx-controls-group" style="display:none; border-top:1px solid var(--border-color); padding-top:14px; margin-top:12px;">
+          <!-- 发光强度滑块 -->
+          <div class="form-group">
+            <div class="form-label">
+              <span>✨ 特效发光增益</span>
+              <span class="value-badge" id="lbl-glow">115%</span>
+            </div>
+            <input type="range" id="range-glow" min="50" max="250" step="5" value="115">
           </div>
-          <label class="switch">
-            <input type="checkbox" id="chk-outline" checked>
-            <span class="slider"></span>
-          </label>
-        </div>
 
-        <!-- 描边颜色 -->
-        <div class="form-group" style="margin-top: 12px;" id="outline-color-group">
-          <div class="form-label">
-            <span>描边颜色</span>
-            <span class="value-badge" id="lbl-outline-color">#12141a</span>
+          <!-- 混合模式选择 -->
+          <div class="form-group" id="blend-mode-wrap">
+            <div class="form-label">
+              <span>特效图层混合模式</span>
+              <span class="value-badge" id="lbl-blend">加色发光 (Additive)</span>
+            </div>
+            <div class="capsule-group" style="grid-template-columns: repeat(3, 1fr);">
+              <button class="capsule-btn active" data-blend="additive">加色 (Add)</button>
+              <button class="capsule-btn" data-blend="screen">滤色 (Screen)</button>
+              <button class="capsule-btn" data-blend="normal">正常 (Alpha)</button>
+            </div>
           </div>
-          <div class="color-picker-wrap">
-            <input type="color" id="picker-outline-color" value="#12141a">
-            <span style="font-size:12px; color:var(--text-muted);">推荐纯黑或深墨色</span>
-          </div>
-        </div>
-
-        <!-- 孤立噪点过滤 -->
-        <div class="form-group" style="margin-top: 16px;">
-          <div class="form-label">
-            <span>杂色孤立微粒过滤</span>
-            <span class="value-badge" id="lbl-noise">18 px</span>
-          </div>
-          <input type="range" id="range-noise" min="0" max="50" step="2" value="18">
         </div>
 
         <!-- 开始生成操作按钮 -->
@@ -760,22 +802,39 @@
       <!-- 快捷示例 -->
       <div class="panel-card">
         <div class="panel-title">💡 快速测试示例</div>
-        <div style="display:flex; gap:8px;">
-          <button class="capsule-btn" style="flex:1;" id="btn-demo-sword">神兵飞剑</button>
-          <button class="capsule-btn" style="flex:1;" id="btn-demo-ring">空间戒指</button>
-          <button class="capsule-btn" style="flex:1;" id="btn-demo-boots">灵风战靴</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+          <button class="capsule-btn" id="btn-demo-sword">🗡️ 实体飞剑</button>
+          <button class="capsule-btn" id="btn-demo-vfx">✨ 发光剑气</button>
+          <button class="capsule-btn" id="btn-demo-boots">👢 灵风战靴</button>
+          <button class="capsule-btn" style="border-color:var(--accent-cyan); color:var(--accent-cyan);" id="btn-demo-composite">⚔️ 飞剑+剑气合体</button>
         </div>
       </div>
     </div>
 
     <!-- 右侧工作区 -->
     <div class="workspace">
-      <!-- 拖拽上传框 -->
+      <!-- 单图拖拽上传框 -->
       <div class="dropzone" id="dropzone">
         <input type="file" id="file-input" accept="image/*" multiple>
         <div class="dropzone-icon">📥</div>
         <div class="dropzone-title">点击上传或将 AI 图像拖拽至此处</div>
         <div class="dropzone-subtext">支持 PNG / JPG / WEBP • 支持直接从剪贴板粘贴截图 (Ctrl+V) • 支持多图批量拖入</div>
+      </div>
+
+      <!-- 双图层合体专用拖拽框 (Composite Dual Slots) -->
+      <div id="composite-dropzone-wrap" style="display:none; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div class="dropzone" id="dropzone-layer1" style="padding: 24px 16px;">
+          <input type="file" id="file-layer1" accept="image/*">
+          <div style="font-size: 28px; margin-bottom: 8px;">🗡️</div>
+          <div class="dropzone-title" style="font-size: 14px;">图层 1：实体道具 (Layer 1)</div>
+          <div class="dropzone-subtext" id="lbl-l1-status">点击选择或拖入剑身/实体图 (推荐中性暗灰底)</div>
+        </div>
+        <div class="dropzone" id="dropzone-layer2" style="padding: 24px 16px;">
+          <input type="file" id="file-layer2" accept="image/*">
+          <div style="font-size: 28px; margin-bottom: 8px;">✨</div>
+          <div class="dropzone-title" style="font-size: 14px;">图层 2：发光特效 (Layer 2)</div>
+          <div class="dropzone-subtext" id="lbl-l2-status">点击选择或拖入雷电/光环图 (推荐纯黑底 #000000)</div>
+        </div>
       </div>
 
       <!-- 批量项目托盘 -->
@@ -860,17 +919,22 @@
   <script>
     // 全局状态
     const state = {
+      mode: 'solid', // 'solid' | 'vfx' | 'composite'
       targetSize: 96,
       colorCount: 32,
       removeBg: true,
       applyOutline: true,
       outlineColor: '#12141a',
       noiseArea: 18,
+      glowGain: 115,
+      blendMode: 'additive',
       zoom: 'fit',
       currentRawBase64: null,
       currentNativeBase64: null,
       currentPreview4xBase64: null,
-      batchItems: [], // { name, rawBase64, nativeBase64, preview4xBase64, size }
+      layer1Base64: null,
+      layer2Base64: null,
+      batchItems: [],
       currentBatchIndex: 0
     };
 
@@ -885,6 +949,46 @@
     const btnDownloadHd = document.getElementById('btn-download-hd');
     const btnDownloadBatchZip = document.getElementById('btn-download-batch-zip');
     const batchTray = document.getElementById('batch-tray');
+
+    // 处理模式切换监听
+    document.querySelectorAll('.capsule-btn[data-mode]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.capsule-btn[data-mode]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.mode = btn.dataset.mode;
+
+        const modeNames = { solid: '📦 实体道具', vfx: '✨ 发光特效', composite: '⚔️ 双层合体' };
+        document.getElementById('lbl-mode').innerText = modeNames[state.mode];
+
+        const isSolid = state.mode === 'solid';
+        const isVfx = state.mode === 'vfx';
+        const isComposite = state.mode === 'composite';
+
+        document.getElementById('solid-controls-group').style.display = isVfx ? 'none' : 'block';
+        document.getElementById('vfx-controls-group').style.display = (isVfx || isComposite) ? 'block' : 'none';
+        document.getElementById('blend-mode-wrap').style.display = isComposite ? 'block' : 'none';
+
+        document.getElementById('dropzone').style.display = isComposite ? 'none' : 'block';
+        document.getElementById('composite-dropzone-wrap').style.display = isComposite ? 'grid' : 'none';
+      });
+    });
+
+    // 特效混合模式切换
+    document.querySelectorAll('.capsule-btn[data-blend]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.capsule-btn[data-blend]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.blendMode = btn.dataset.blend;
+        const blendNames = { additive: '加色发光 (Additive)', screen: '滤色 (Screen)', normal: '正常 (Alpha)' };
+        document.getElementById('lbl-blend').innerText = blendNames[state.blendMode];
+      });
+    });
+
+    // 发光增益滑块
+    document.getElementById('range-glow').addEventListener('input', (e) => {
+      state.glowGain = parseInt(e.target.value);
+      document.getElementById('lbl-glow').innerText = `${state.glowGain}%`;
+    });
 
     // 初始化控制项监听
     document.querySelectorAll('.capsule-btn[data-size]').forEach(btn => {
@@ -923,6 +1027,15 @@
 
     // 点击【开始生成】按钮执行处理
     document.getElementById('btn-run-process').addEventListener('click', () => {
+      if (state.mode === 'composite') {
+        if (!state.layer1Base64 && !state.currentRawBase64) {
+          alert('请先导入图层 1 (实体道具) 与 图层 2 (发光特效)！');
+          return;
+        }
+        reprocessCurrent();
+        return;
+      }
+
       if (!state.currentRawBase64 && state.batchItems.length === 0) {
         alert('请先上传或拖拽 AI 图像，或者点击下方示例！');
         return;
@@ -932,6 +1045,78 @@
       } else {
         reprocessCurrent();
       }
+    });
+
+    // 双图层上传监听与拖拽支持
+    const dropzoneL1 = document.getElementById('dropzone-layer1');
+    const dropzoneL2 = document.getElementById('dropzone-layer2');
+
+    ['dragenter', 'dragover'].forEach(evt => {
+      dropzoneL1.addEventListener(evt, (e) => { e.preventDefault(); dropzoneL1.classList.add('dragover'); });
+      dropzoneL2.addEventListener(evt, (e) => { e.preventDefault(); dropzoneL2.classList.add('dragover'); });
+    });
+
+    ['dragleave', 'drop'].forEach(evt => {
+      dropzoneL1.addEventListener(evt, (e) => { e.preventDefault(); dropzoneL1.classList.remove('dragover'); });
+      dropzoneL2.addEventListener(evt, (e) => { e.preventDefault(); dropzoneL2.classList.remove('dragover'); });
+    });
+
+    dropzoneL1.addEventListener('drop', async (e) => {
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        state.layer1Base64 = await fileToBase64(files[0]);
+        document.getElementById('lbl-l1-status').innerText = `已载入: ${files[0].name}`;
+        imgOriginal.src = state.layer1Base64;
+        state.currentRawBase64 = state.layer1Base64;
+        applyZoom();
+      }
+    });
+
+    dropzoneL2.addEventListener('drop', async (e) => {
+      const files = e.dataTransfer.files;
+      if (files && files.length > 0) {
+        state.layer2Base64 = await fileToBase64(files[0]);
+        document.getElementById('lbl-l2-status').innerText = `已载入: ${files[0].name}`;
+      }
+    });
+
+    document.getElementById('file-layer1').addEventListener('change', async (e) => {
+      if (e.target.files.length > 0) {
+        state.layer1Base64 = await fileToBase64(e.target.files[0]);
+        document.getElementById('lbl-l1-status').innerText = `已载入: ${e.target.files[0].name}`;
+        imgOriginal.src = state.layer1Base64;
+        state.currentRawBase64 = state.layer1Base64;
+        applyZoom();
+      }
+    });
+
+    document.getElementById('file-layer2').addEventListener('change', async (e) => {
+      if (e.target.files.length > 0) {
+        state.layer2Base64 = await fileToBase64(e.target.files[0]);
+        document.getElementById('lbl-l2-status').innerText = `已载入: ${e.target.files[0].name}`;
+      }
+    });
+
+    // 资产生图规范指南弹窗逻辑
+    const guideModal = document.getElementById('guide-modal');
+    document.getElementById('btn-open-guide-modal').addEventListener('click', () => {
+      guideModal.style.display = 'flex';
+    });
+    document.getElementById('btn-close-guide-modal').addEventListener('click', () => {
+      guideModal.style.display = 'none';
+    });
+    guideModal.addEventListener('click', (e) => {
+      if (e.target === guideModal) guideModal.style.display = 'none';
+    });
+
+    document.querySelectorAll('.btn-copy-prompt').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.dataset.text;
+        navigator.clipboard.writeText(text).then(() => {
+          btn.innerText = '✅ 已复制';
+          setTimeout(() => btn.innerText = '📋 复制', 2000);
+        });
+      });
     });
 
     // 缩放切换与网格线
@@ -1123,11 +1308,19 @@
 
     async function processSingle(fileName, base64) {
       state.currentRawBase64 = base64;
-      imgOriginal.src = base64;
+      if (state.mode !== 'composite' && base64) {
+        imgOriginal.src = base64;
+      }
       document.getElementById('item-title-meta').innerText = `• ${fileName}`;
 
       loadingOverlay.classList.add('active');
-      loadingText.innerText = 'AI 正在深度去除背景并生成真像素调色板...';
+      if (state.mode === 'composite') {
+        loadingText.innerText = 'AI 正在分别提取实体描边与无损发光剑气，并进行加色发光混合...';
+      } else if (state.mode === 'vfx') {
+        loadingText.innerText = 'AI 正在执行纯黑底亮度-透明度分离，保留 100% 细微电弧...';
+      } else {
+        loadingText.innerText = 'AI 正在深度去除背景并生成真像素调色板...';
+      }
 
       const t0 = performance.now();
       try {
@@ -1142,7 +1335,7 @@
         document.getElementById('pixel-res-meta').innerText = `${res.target_size} × ${res.target_size} Px`;
         document.getElementById('meta-time').innerText = `${Math.round(t1 - t0)} ms`;
         document.getElementById('meta-colors').innerText = `${res.actual_colors || state.colorCount} 色`;
-        document.getElementById('meta-outline').innerText = state.applyOutline ? '已生成 1px 闭合' : '无';
+        document.getElementById('meta-outline').innerText = state.mode === 'vfx' ? '无 (发光专用)' : (state.applyOutline ? '已生成 1px 闭合' : '无');
       } catch (err) {
         alert('转换失败: ' + err.message);
       } finally {
@@ -1151,6 +1344,14 @@
     }
 
     function reprocessCurrent() {
+      if (state.mode === 'composite') {
+        if (!state.layer1Base64 || !state.layer2Base64) {
+          alert('双层合体模式需要同时载入图层 1 (实体道具) 与图层 2 (发光特效)！');
+          return;
+        }
+        processSingle('飞剑+剑气双层发光合体', state.layer1Base64);
+        return;
+      }
       if (state.currentRawBase64) {
         processSingle(document.getElementById('item-title-meta').innerText.replace('• ', '') || 'image.png', state.currentRawBase64);
       }
@@ -1161,13 +1362,18 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          mode: state.mode,
           image_base64: base64Data,
+          layer1_base64: state.layer1Base64 || (state.mode === 'composite' ? base64Data : null),
+          layer2_base64: state.layer2Base64 || (state.mode === 'composite' ? base64Data : null),
           target_size: state.targetSize,
           color_count: state.colorCount,
           remove_bg: state.removeBg,
           apply_outline: state.applyOutline,
           outline_color: hexToRgb(state.outlineColor),
-          noise_area: state.noiseArea
+          noise_area: state.noiseArea,
+          glow_intensity: state.glowGain / 100,
+          blend_mode: state.blendMode
         })
       });
       if (!resp.ok) {
@@ -1185,12 +1391,12 @@
     // 下载功能
     btnDownloadNative.addEventListener('click', () => {
       if (!state.currentNativeBase64) return;
-      downloadDataUrl(state.currentNativeBase64, `true_pixel_${state.targetSize}x${state.targetSize}.png`);
+      downloadDataUrl(state.currentNativeBase64, `true_pixel_${state.mode}_${state.targetSize}x${state.targetSize}.png`);
     });
 
     btnDownloadHd.addEventListener('click', () => {
       if (!state.currentPreview4xBase64) return;
-      downloadDataUrl(state.currentPreview4xBase64, `true_pixel_preview_${state.targetSize * 4}x${state.targetSize * 4}.png`);
+      downloadDataUrl(state.currentPreview4xBase64, `true_pixel_preview_${state.mode}_${state.targetSize * 4}x${state.targetSize * 4}.png`);
     });
 
     btnDownloadBatchZip.addEventListener('click', async () => {
@@ -1231,9 +1437,46 @@
     }
 
     // 预置 Demo 图片
-    document.getElementById('btn-demo-sword').addEventListener('click', () => loadDemo('/examples/divine_flying_sword.jpg', 'flying_sword.jpg'));
-    document.getElementById('btn-demo-ring').addEventListener('click', () => loadDemo('/examples/bagua_spirit_mirror.jpg', 'spirit_mirror.jpg'));
-    document.getElementById('btn-demo-boots').addEventListener('click', () => loadDemo('/examples/celestial_daoist_robe.jpg', 'daoist_robe.jpg'));
+    document.getElementById('btn-demo-sword').addEventListener('click', () => {
+      document.querySelector('.capsule-btn[data-mode="solid"]').click();
+      loadDemo('/examples/divine_flying_sword.jpg', 'divine_sword.jpg');
+    });
+
+    document.getElementById('btn-demo-vfx').addEventListener('click', () => {
+      document.querySelector('.capsule-btn[data-mode="vfx"]').click();
+      loadDemo('/examples/demo_sword_aura.png', 'sword_aura_vfx.png');
+    });
+
+    document.getElementById('btn-demo-boots').addEventListener('click', () => {
+      document.querySelector('.capsule-btn[data-mode="solid"]').click();
+      loadDemo('/examples/celestial_daoist_robe.jpg', 'daoist_robe.jpg');
+    });
+
+    document.getElementById('btn-demo-composite').addEventListener('click', async () => {
+      document.querySelector('.capsule-btn[data-mode="composite"]').click();
+      loadingOverlay.classList.add('active');
+      loadingText.innerText = '正在载入合体演示资产 (实体剑身 + 剑气发光)...';
+      try {
+        const [resL1, resL2] = await Promise.all([
+          fetch('/examples/demo_sword_body.png').then(r => r.blob()).then(fileToBase64),
+          fetch('/examples/demo_sword_aura.png').then(r => r.blob()).then(fileToBase64)
+        ]);
+        state.layer1Base64 = resL1;
+        state.layer2Base64 = resL2;
+        state.currentRawBase64 = resL1;
+        imgOriginal.src = resL1;
+        document.getElementById('lbl-l1-status').innerText = '已载入: demo_sword_body.png';
+        document.getElementById('lbl-l2-status').innerText = '已载入: demo_sword_aura.png';
+        document.getElementById('item-title-meta').innerText = '• 实体飞剑 + 极光剑气 (已就绪)';
+        applyZoom();
+        await processSingle('飞剑+剑气双层发光合体', resL1);
+      } catch (e) {
+        console.error('合体示例加载失败', e);
+        alert('合体示例加载失败: ' + e.message);
+      } finally {
+        loadingOverlay.classList.remove('active');
+      }
+    });
 
     async function loadDemo(url, name) {
       try {
@@ -1325,6 +1568,65 @@
       </div>
       <div class="modal-body" id="modal-body">
         <img id="modal-img" class="pixel-target-img" alt="高清检视">
+      </div>
+    </div>
+  </div>
+
+  <!-- 各类资产生图规范与底色指南弹窗 -->
+  <div class="modal-backdrop" id="guide-modal" style="display:none;">
+    <div class="modal-content" style="max-width: 880px; height: auto; max-height: 90vh;">
+      <div class="modal-header">
+        <div style="font-weight:700; font-size:16px; display:flex; align-items:center; gap:8px;">
+          <span>📖 AI 像素游戏各类资产生图规范与底色指南</span>
+        </div>
+        <button class="btn btn-secondary" id="btn-close-guide-modal" style="padding:4px 12px; font-size:12px;">✕ 关闭</button>
+      </div>
+      <div style="padding: 20px 24px; overflow-y: auto; color: var(--text-main); font-size: 13px; line-height: 1.6;">
+        <div style="background: rgba(0, 240, 255, 0.08); border-left: 4px solid var(--accent-cyan); padding: 12px 16px; border-radius: 4px; margin-bottom: 18px;">
+          <strong>💡 为什么底色决定成败？</strong><br>
+          AI 会根据背景产生反光与羽化混色。严禁使用纯绿幕，因为绿幕会导致严重的<b>绿色反光污染</b>以及把青绿特效当成背景吃掉！请根据资产类型选用对应底色。
+        </div>
+
+        <div style="display: grid; gap: 16px;">
+          <!-- 规范 1 -->
+          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size: 14px; font-weight: 700; color: var(--accent-cyan);">1. 常规实体道具 / 角色 (Solid Sprite)</span>
+              <span style="font-size: 11px; background: #1a2233; color: #8ba2c4; padding: 2px 8px; border-radius: 4px;">推荐底色: 中性暗灰底 (#1a1e28)</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">适用于金属武器、金甲、药水、宝箱及正常服饰角色。RGB 色彩均衡不偏色，最利于抓取 1px 深黑轮廓线。</p>
+            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
+              16-bit retro pixel art game sprite of [道具名称], isolated on neutral dark grey background, clean solid 1px dark pixel outline, high contrast vibrant retro RPG item, crisp pixelated edges
+              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art game sprite of [ITEM_NAME], isolated on neutral dark grey background, clean solid 1px dark pixel outline, high contrast vibrant retro RPG item, crisp pixelated edges" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
+            </div>
+          </div>
+
+          <!-- 规范 2 -->
+          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size: 14px; font-weight: 700; color: #ffb86c;">2. 深色系实体装备 / 暗影人物 (Dark Sprite)</span>
+              <span style="font-size: 11px; background: #262118; color: #ffd899; padding: 2px 8px; border-radius: 4px;">推荐底色: 中性浅灰底 (#e0e4ec)</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">适用于黑衣刺客、黑曜石重剑、死灵黑袍。浅色底可避免深色披风与黑发“融底”，确保轮廓清晰。</p>
+            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
+              16-bit retro pixel art game sprite of [深色道具], isolated on clean light grey background, dark obsidian material, sharp crisp pixel silhouette
+              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art game sprite of [DARK_ITEM_NAME], isolated on clean light grey background, dark obsidian material, sharp crisp pixel silhouette" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
+            </div>
+          </div>
+
+          <!-- 规范 3 -->
+          <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+              <span style="font-size: 14px; font-weight: 700; color: #50fa7b;">3. 发光特效 / 剑气雷电 / 魔法光环 (Glow & VFX)</span>
+              <span style="font-size: 11px; background: #16291a; color: #50fa7b; padding: 2px 8px; border-radius: 4px;">强烈推荐: 纯黑底 (#000000)</span>
+            </div>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">发光属于加色混合（Additive）。纯黑底具备 100% 原始发光色还原度，结合本工具的【发光特效模式】可实现 0% 细节丢失无损提取！</p>
+            <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
+              16-bit retro pixel art glowing magic aura of [光环/雷电特征], glowing cyan lightning and floating sparkles, isolated on pure black background #000000, translucent additive glow, no weapon body
+              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art glowing magic aura of [AURA_DESC], glowing cyan lightning and floating sparkles, isolated on pure black background #000000, translucent additive glow, no weapon body" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

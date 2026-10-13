@@ -17,7 +17,7 @@ import zipfile
 import webbrowser
 import numpy as np
 from PIL import Image
-from true_pixel_core import process_image
+from true_pixel_core import process_image, process_vfx_image, composite_layers
 
 # Force UTF-8 on Windows console
 if sys.platform == "win32":
@@ -73,39 +73,104 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
             body = self.rfile.read(content_length)
             data = json.loads(body.decode("utf-8"))
 
-            raw_b64 = data.get("image_base64", "")
-            if "," in raw_b64:
-                raw_b64 = raw_b64.split(",", 1)[1]
-
-            image_bytes = base64.b64decode(raw_b64)
-            raw_pil = Image.open(io.BytesIO(image_bytes))
-            raw_w, raw_h = raw_pil.size
-
+            mode = data.get("mode", "solid")  # 'solid' | 'vfx' | 'composite'
             target_size = int(data.get("target_size", 96))
             color_count = int(data.get("color_count", 32))
             remove_bg = bool(data.get("remove_bg", True))
             apply_outline = bool(data.get("apply_outline", True))
             outline_color = tuple(data.get("outline_color", [18, 20, 26]))
             noise_area = int(data.get("noise_area", 18))
+            glow_intensity = float(data.get("glow_intensity", 1.15))
+            blend_mode = str(data.get("blend_mode", "additive"))
 
-            native_img, preview_4x = process_image(
-                input_image=raw_pil,
-                target_size=target_size,
-                color_count=color_count,
-                remove_bg=remove_bg,
-                apply_outline=apply_outline,
-                outline_color=outline_color,
-                noise_filter_area=noise_area
-            )
+            def b64_to_pil(b64_str):
+                if not b64_str:
+                    return None
+                if "," in b64_str:
+                    b64_str = b64_str.split(",", 1)[1]
+                return Image.open(io.BytesIO(base64.b64decode(b64_str)))
 
-            # Convert results to Base64 PNGs
-            buf_native = io.BytesIO()
-            native_img.save(buf_native, format="PNG")
-            b64_native = "data:image/png;base64," + base64.b64encode(buf_native.getvalue()).decode("utf-8")
+            def pil_to_b64(pil_img):
+                buf = io.BytesIO()
+                pil_img.save(buf, format="PNG")
+                return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode("utf-8")
 
-            buf_4x = io.BytesIO()
-            preview_4x.save(buf_4x, format="PNG")
-            b64_4x = "data:image/png;base64," + base64.b64encode(buf_4x.getvalue()).decode("utf-8")
+            if mode == "composite":
+                layer1_pil = b64_to_pil(data.get("layer1_base64", ""))
+                layer2_pil = b64_to_pil(data.get("layer2_base64", ""))
+                if layer1_pil is None or layer2_pil is None:
+                    single_pil = b64_to_pil(data.get("image_base64", ""))
+                    if single_pil is None:
+                        raise ValueError("双层合体模式需要提供图层 1 (实体) 和图层 2 (特效)！")
+                    layer1_pil = single_pil
+                    layer2_pil = single_pil
+
+                solid_native, _ = process_image(
+                    input_image=layer1_pil,
+                    target_size=target_size,
+                    color_count=color_count,
+                    remove_bg=remove_bg,
+                    apply_outline=apply_outline,
+                    outline_color=outline_color,
+                    noise_filter_area=noise_area
+                )
+
+                vfx_native, _ = process_vfx_image(
+                    input_image=layer2_pil,
+                    target_size=target_size,
+                    color_count=color_count,
+                    glow_gain=glow_intensity
+                )
+
+                comp_native = composite_layers(
+                    solid_img=solid_native,
+                    vfx_img=vfx_native,
+                    glow_intensity=glow_intensity,
+                    blend_mode=blend_mode
+                )
+
+                preview_scale = 4 if target_size <= 256 else (2 if target_size <= 512 else 1)
+                preview_w = target_size * preview_scale
+                preview_4x = comp_native.resize((preview_w, preview_w), Image.Resampling.NEAREST)
+
+                native_img = comp_native
+                raw_w, raw_h = layer1_pil.size
+                extra_payload = {
+                    "layer1_base64": pil_to_b64(solid_native),
+                    "layer2_base64": pil_to_b64(vfx_native)
+                }
+
+            elif mode == "vfx":
+                raw_pil = b64_to_pil(data.get("image_base64", ""))
+                if raw_pil is None:
+                    raise ValueError("请提供发光特效图像！")
+                raw_w, raw_h = raw_pil.size
+                native_img, preview_4x = process_vfx_image(
+                    input_image=raw_pil,
+                    target_size=target_size,
+                    color_count=color_count,
+                    glow_gain=glow_intensity
+                )
+                extra_payload = {}
+
+            else:  # 'solid'
+                raw_pil = b64_to_pil(data.get("image_base64", ""))
+                if raw_pil is None:
+                    raise ValueError("请提供实体道具图像！")
+                raw_w, raw_h = raw_pil.size
+                native_img, preview_4x = process_image(
+                    input_image=raw_pil,
+                    target_size=target_size,
+                    color_count=color_count,
+                    remove_bg=remove_bg,
+                    apply_outline=apply_outline,
+                    outline_color=outline_color,
+                    noise_filter_area=noise_area
+                )
+                extra_payload = {}
+
+            b64_native = pil_to_b64(native_img)
+            b64_4x = pil_to_b64(preview_4x)
 
             # Count actual unique colors
             arr_np = np.array(native_img)
@@ -113,12 +178,14 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
 
             response_data = {
                 "success": True,
+                "mode": mode,
                 "native_base64": b64_native,
                 "preview4x_base64": b64_4x,
                 "target_size": target_size,
                 "raw_width": raw_w,
                 "raw_height": raw_h,
-                "actual_colors": min(unique_colors, color_count)
+                "actual_colors": min(unique_colors, color_count),
+                **extra_payload
             }
 
             resp_bytes = json.dumps(response_data).encode("utf-8")
@@ -129,6 +196,8 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(resp_bytes)
 
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             err_msg = json.dumps({"error": str(e)}).encode("utf-8")
             self.send_response(500)
             self.send_header("Content-Type", "application/json")

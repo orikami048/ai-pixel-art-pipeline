@@ -153,3 +153,137 @@ def process_image(
     preview_4x = native_img.resize((preview_w, preview_w), Image.Resampling.NEAREST)
 
     return native_img, preview_4x
+
+
+def process_vfx_image(
+    input_image: Image.Image,
+    target_size: int = 96,
+    color_count: int = 32,
+    black_threshold: int = 15,
+    glow_gain: float = 1.15
+) -> Tuple[Image.Image, Image.Image]:
+    """
+    Extract glowing VFX sprite (Aura / Lightning / Magic Flame) from pure black, dark,
+    or chroma-green background.
+    Uses Luminance-to-Alpha + Unmultiply & De-spill algorithms.
+    Preserves 100% subtle lightning arcs and star sparks without dark edge bleed or black outlines.
+    """
+    img_rgb = input_image.convert("RGB")
+    arr = np.array(img_rgb, dtype=np.float32)
+    h, w = arr.shape[:2]
+    r = arr[:, :, 0]
+    g = arr[:, :, 1]
+    b = arr[:, :, 2]
+
+    # Sample corners to detect background type
+    corners = np.vstack([
+        arr[0:min(10, h), 0:min(10, w)].reshape(-1, 3),
+        arr[0:min(10, h), max(0, w-10):w].reshape(-1, 3),
+        arr[max(0, h-10):h, 0:min(10, w)].reshape(-1, 3),
+        arr[max(0, h-10):h, max(0, w-10):w].reshape(-1, 3)
+    ])
+    bg_mean = np.median(corners, axis=0)
+
+    # Detect chroma green screen: G is high and significantly dominates R & B
+    is_chroma_green = (bg_mean[1] > 120 and bg_mean[1] > bg_mean[0] + 40 and bg_mean[1] > bg_mean[2] + 40)
+
+    if is_chroma_green:
+        # Chroma green de-spill & alpha extraction
+        dist = np.linalg.norm(arr - bg_mean, axis=2)
+        alpha = np.clip((dist - 18.0) / 45.0 * 255.0 * glow_gain, 0.0, 255.0)
+
+        # De-spill excess green on foreground pixels
+        g_max_other = np.maximum(r, b)
+        g_clean = np.where(alpha > 0, np.minimum(g, g_max_other * 1.25 + 15), g)
+        r_clean = r
+        b_clean = b
+    else:
+        # Standard black/dark background VFX extraction (Luminance to Alpha + Unmultiply)
+        luma = 0.299 * r + 0.587 * g + 0.114 * b
+        bg_luma = 0.299 * bg_mean[0] + 0.587 * bg_mean[1] + 0.114 * bg_mean[2]
+        effective_thresh = max(black_threshold, bg_luma + 5)
+
+        alpha = np.clip((luma - effective_thresh) / np.maximum(1.0, 255.0 - effective_thresh) * 255.0 * glow_gain, 0.0, 255.0)
+
+        # Unmultiply colors to eliminate dark halos from fading into black
+        safe_a = np.maximum(alpha / 255.0, 1e-4)
+        r_clean = np.clip(r / safe_a, 0.0, 255.0)
+        g_clean = np.clip(g / safe_a, 0.0, 255.0)
+        b_clean = np.clip(b / safe_a, 0.0, 255.0)
+
+    rgba_out = np.dstack([r_clean, g_clean, b_clean, alpha]).astype(np.uint8)
+    clean_img = Image.fromarray(rgba_out, mode="RGBA")
+
+    bbox = clean_img.getbbox()
+    if bbox:
+        cropped = clean_img.crop(bbox)
+    else:
+        cropped = clean_img
+
+    cw, ch = cropped.size
+    fit_size = target_size
+    scale = fit_size / max(cw, ch)
+    nw = max(1, int(round(cw * scale)))
+    nh = max(1, int(round(ch * scale)))
+
+    resized = cropped.resize((nw, nh), Image.Resampling.LANCZOS)
+
+    # Color quantization while preserving smooth glow alpha
+    r_c, g_c, b_c, a_c = resized.split()
+    rgb_temp = Image.merge("RGB", (r_c, g_c, b_c))
+    q_rgb = rgb_temp.quantize(colors=color_count, method=Image.Quantize.MEDIANCUT).convert("RGB")
+    quantized = Image.merge("RGBA", (*q_rgb.split(), a_c))
+
+    # Center onto target canvas
+    canvas = Image.new("RGBA", (target_size, target_size), (0, 0, 0, 0))
+    offset_x = (target_size - nw) // 2
+    offset_y = (target_size - nh) // 2
+    canvas.paste(quantized, (offset_x, offset_y), quantized)
+
+    preview_scale = 4 if target_size <= 256 else (2 if target_size <= 512 else 1)
+    preview_w = target_size * preview_scale
+    preview_4x = canvas.resize((preview_w, preview_w), Image.Resampling.NEAREST)
+
+    return canvas, preview_4x
+
+
+def composite_layers(
+    solid_img: Image.Image,
+    vfx_img: Image.Image,
+    glow_intensity: float = 1.15,
+    blend_mode: str = "additive"
+) -> Image.Image:
+    """
+    Composite Layer 1 (Solid Weapon/Item) and Layer 2 (Glowing Aura/VFX) with game-engine grade blending.
+    """
+    if vfx_img.size != solid_img.size:
+        vfx_img = vfx_img.resize(solid_img.size, Image.Resampling.NEAREST)
+
+    s_arr = np.array(solid_img.convert("RGBA"), dtype=np.float32)
+    v_arr = np.array(vfx_img.convert("RGBA"), dtype=np.float32)
+
+    sr, sg, sb, sa = s_arr[:, :, 0], s_arr[:, :, 1], s_arr[:, :, 2], s_arr[:, :, 3] / 255.0
+    vr, vg, vb, va = v_arr[:, :, 0], v_arr[:, :, 1], v_arr[:, :, 2], (v_arr[:, :, 3] / 255.0) * glow_intensity
+    va = np.clip(va, 0.0, 1.0)
+
+    if blend_mode == "additive":
+        # Pure luminous additive blending (VFX illuminates solid & background)
+        cr = np.clip(sr * sa + vr * va, 0.0, 255.0)
+        cg = np.clip(sg * sa + vg * va, 0.0, 255.0)
+        cb = np.clip(sb * sa + vb * va, 0.0, 255.0)
+        ca = np.clip(sa + va * (1.0 - sa * 0.4), 0.0, 1.0) * 255.0
+    elif blend_mode == "screen":
+        # Screen blending
+        cr = 255.0 * (1.0 - (1.0 - (sr * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+        cg = 255.0 * (1.0 - (1.0 - (sg * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+        cb = 255.0 * (1.0 - (1.0 - (sb * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+        ca = np.clip(sa + va, 0.0, 1.0) * 255.0
+    else:
+        # Normal alpha blend (VFX placed on top)
+        cr = vr * va + sr * sa * (1.0 - va)
+        cg = vg * va + sg * sa * (1.0 - va)
+        cb = vb * va + sb * sa * (1.0 - va)
+        ca = (va + sa * (1.0 - va)) * 255.0
+
+    comp = np.dstack([cr, cg, cb, ca]).astype(np.uint8)
+    return Image.fromarray(comp, mode="RGBA")
