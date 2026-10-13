@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TruePixel Studio 🎨 AI 原画一键转工业级真像素</title>
+  <style>
+    :root {
+      --bg-dark: #0e121a;
+      --bg-card: #151b26;
+      --bg-card-hover: #1c2433;
+      --border-color: #273142;
+      --accent-cyan: #00f0ff;
+      --accent-gold: #ffbe3b;
+      --accent-green: #52c41a;
+      --text-main: #f0f4f8;
+      --text-muted: #8b99ad;
+      --radius: 10px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: rgba(21, 27, 38, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-badge {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #00f0ff 0%, #7928ca 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      font-size: 20px;
+      color: #fff;
+      box-shadow: 0 0 16px rgba(0, 240, 255, 0.4);
+    }
+
+    .brand h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .brand p {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .header-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 13px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      transition: all 0.2s;
+    }
+
+    .header-links a:hover {
+      color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1400px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 360px 1fr;
+      gap: 24px;
+    }
+
+    /* 左侧控制栏 */
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .panel-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+    }
+
+    .panel-title {
+      font-size: 14px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--accent-cyan);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .form-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      color: var(--text-main);
+    }
+
+    .form-label span.value-badge {
+      color: var(--accent-gold);
+      font-family: monospace;
+      font-weight: bold;
+    }
+
+    /* 选项胶囊按钮 */
+    .capsule-group {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 6px;
+    }
+
+    .capsule-btn {
+      background: #0f141d;
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 8px 0;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.18s;
+    }
+
+    .capsule-btn:hover {
+      border-color: #43536d;
+      color: #fff;
+    }
+
+    .capsule-btn.active {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      color: #0c121d;
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.35);
+    }
+
+    /* 滑块控件 */
+    input[type="range"] {
+      width: 100%;
+      height: 6px;
+      background: #0c121d;
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      cursor: pointer;
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.6);
+    }
+
+    /* 开关切换 */
+    .switch-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 0;
+    }
+
+    .switch-label {
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .switch-subtext {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: #1f2736;
+      border-radius: 24px;
+      transition: .25s;
+      border: 1px solid var(--border-color);
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      border-radius: 50%;
+      transition: .25s;
+    }
+
+    input:checked + .slider {
+      background-color: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(20px);
+      background-color: #0c121d;
+    }
+
+    .color-picker-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 6px;
+    }
+
+    input[type="color"] {
+      border: none;
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      cursor: pointer;
+      background: transparent;
+    }
+
+    /* 右侧工作区 */
+    .workspace {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* 拖拽上传区 */
+    .dropzone {
+      border: 2px dashed #2d3a4f;
+      border-radius: var(--radius);
+      padding: 36px 20px;
+      text-align: center;
+      background: rgba(21, 27, 38, 0.4);
+      cursor: pointer;
+      transition: all 0.25s;
+      position: relative;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.05);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.15);
+    }
+
+    .dropzone-icon {
+      font-size: 42px;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.4));
+    }
+
+    .dropzone-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .dropzone-subtext {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .dropzone input[type="file"] {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      opacity: 0;
+      cursor: pointer;
+    }
+
+    /* 对比视图卡片 */
+    .preview-stage {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .preview-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 16px;
+    }
+
+    .zoom-toolbar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #0f141d;
+      padding: 4px;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+    }
+
+    .zoom-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .zoom-btn:hover {
+      color: #fff;
+    }
+
+    .zoom-btn.active {
+      background: #232d3f;
+      color: var(--accent-cyan);
+    }
+
+    .views-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      min-height: 380px;
+    }
+
+    .view-card {
+      background: #0a0d14;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .view-title {
+      background: #111622;
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .view-body {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: auto;
+      min-height: 300px;
+      background-image: 
+        linear-gradient(45deg, #12161f 25%, transparent 25%), 
+        linear-gradient(-45deg, #12161f 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #12161f 75%), 
+        linear-gradient(-45deg, transparent 75%, #12161f 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    }
+
+    .pixel-target-img {
+      image-rendering: pixelated;
+      image-rendering: crisp-edges;
+      transition: transform 0.15s ease-out;
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+    }
+
+    .original-target-img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      transition: transform 0.15s ease-out;
+    }
+
+    /* 底部操作与下载工具栏 */
+    .action-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-top: 1px solid var(--border-color);
+      padding-top: 20px;
+    }
+
+    .meta-tags {
+      display: flex;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .meta-tag-item strong {
+      color: var(--text-main);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: var(--accent-cyan);
+      color: #0c121d;
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.35);
+    }
+
+    .btn-primary:hover {
+      background: #38f4ff;
+      transform: translateY(-1px);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.5);
+    }
+
+    .btn-secondary {
+      background: #192231;
+      border-color: var(--border-color);
+      color: var(--text-main);
+    }
+
+    .btn-secondary:hover {
+      background: #232e42;
+      border-color: #4b5d7a;
+    }
+
+    /* 加载中动画遮罩 */
+    .loading-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(10, 13, 20, 0.85);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s;
+    }
+
+    .loading-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 3px solid rgba(0, 240, 255, 0.15);
+      border-top-color: var(--accent-cyan);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* 批量模式缩略图托盘 */
+    .batch-tray {
+      display: none;
+      grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+      gap: 10px;
+      background: #0b0e14;
+      padding: 12px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      max-height: 160px;
+      overflow-y: auto;
+    }
+
+    .batch-item-thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      cursor: pointer;
+      position: relative;
+      overflow: hidden;
+      background: #151a24;
+    }
+
+    .batch-item-thumb.active {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.5);
+    }
+
+    .batch-item-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: pixelated;
+    }
+
+    /* 移动端响应式 */
+    @media (max-width: 900px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+      .views-container {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="logo-badge">P</div>
+      <div>
+        <h1>TruePixel Studio</h1>
+        <p>Production-Grade AI to True-Pixel Game Asset Pipeline</p>
+      </div>
+    </div>
+    <div class="header-links">
+      <a href="https://github.com/orikami048/ai-pixel-art-pipeline" target="_blank">⭐ GitHub 仓库</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- 左侧参数调节面板 -->
+    <div class="sidebar">
+      <div class="panel-card">
+        <div class="panel-title">⚙️ 像素化核心参数</div>
+
+        <!-- 分辨率选择 -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>目标分辨率</span>
+            <span class="value-badge" id="lbl-resolution">96 × 96</span>
+          </div>
+          <div class="capsule-group">
+            <button class="capsule-btn" data-size="32">32px</button>
+            <button class="capsule-btn" data-size="48">48px</button>
+            <button class="capsule-btn" data-size="64">64px</button>
+            <button class="capsule-btn active" data-size="96">96px</button>
+            <button class="capsule-btn" data-size="128">128px</button>
+          </div>
+        </div>
+
+        <!-- 调色板颜色数 -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>复古调色板颜色数</span>
+            <span class="value-badge" id="lbl-colors">32 色</span>
+          </div>
+          <input type="range" id="range-colors" min="8" max="64" step="4" value="32">
+        </div>
+
+        <!-- AI 背景移除开关 -->
+        <div class="switch-row">
+          <div>
+            <div class="switch-label">AI 深度背景抠图</div>
+            <div class="switch-subtext">去除杂色背景并边缘羽化侵蚀</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="chk-rembg" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- 1px 正交实体黑描边 -->
+        <div class="switch-row" style="margin-top: 12px;">
+          <div>
+            <div class="switch-label">1px 正交闭合描边</div>
+            <div class="switch-subtext">纯正独立游戏复古像素硬轮廓</div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="chk-outline" checked>
+            <span class="slider"></span>
+          </label>
+        </div>
+
+        <!-- 描边颜色 -->
+        <div class="form-group" style="margin-top: 12px;" id="outline-color-group">
+          <div class="form-label">
+            <span>描边颜色</span>
+            <span class="value-badge" id="lbl-outline-color">#12141a</span>
+          </div>
+          <div class="color-picker-wrap">
+            <input type="color" id="picker-outline-color" value="#12141a">
+            <span style="font-size:12px; color:var(--text-muted);">推荐纯黑或深墨色</span>
+          </div>
+        </div>
+
+        <!-- 孤立噪点过滤 -->
+        <div class="form-group" style="margin-top: 16px;">
+          <div class="form-label">
+            <span>杂色孤立微粒过滤</span>
+            <span class="value-badge" id="lbl-noise">18 px</span>
+          </div>
+          <input type="range" id="range-noise" min="0" max="50" step="2" value="18">
+        </div>
+
+      </div>
+
+      <!-- 快捷示例 -->
+      <div class="panel-card">
+        <div class="panel-title">💡 快速测试示例</div>
+        <div style="display:flex; gap:8px;">
+          <button class="capsule-btn" style="flex:1;" id="btn-demo-sword">神兵飞剑</button>
+          <button class="capsule-btn" style="flex:1;" id="btn-demo-ring">空间戒指</button>
+          <button class="capsule-btn" style="flex:1;" id="btn-demo-boots">灵风战靴</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 右侧工作区 -->
+    <div class="workspace">
+      <!-- 拖拽上传框 -->
+      <div class="dropzone" id="dropzone">
+        <input type="file" id="file-input" accept="image/*" multiple>
+        <div class="dropzone-icon">📥</div>
+        <div class="dropzone-title">点击上传或将 AI 图像拖拽至此处</div>
+        <div class="dropzone-subtext">支持 PNG / JPG / WEBP • 支持直接从剪贴板粘贴截图 (Ctrl+V) • 支持多图批量拖入</div>
+      </div>
+
+      <!-- 批量项目托盘 -->
+      <div class="batch-tray" id="batch-tray"></div>
+
+      <!-- 预览对比区 -->
+      <div class="preview-stage" id="preview-stage">
+        <div class="loading-overlay" id="loading-overlay">
+          <div class="spinner"></div>
+          <div style="font-size:14px; font-weight:600; color:var(--accent-cyan);" id="loading-text">AI 正在深度去除背景并生成像素调色板...</div>
+        </div>
+
+        <div class="preview-header">
+          <div style="font-weight:700; font-size:15px; display:flex; align-items:center; gap:8px;">
+            <span>🔍 实时效果对比</span>
+            <span style="font-size:12px; color:var(--text-muted); font-weight:normal;" id="item-title-meta"></span>
+          </div>
+          <div class="zoom-toolbar">
+            <span style="font-size:11px; color:var(--text-muted); margin-right:4px;">放大预览:</span>
+            <button class="zoom-btn" data-zoom="1">1x</button>
+            <button class="zoom-btn" data-zoom="2">2x</button>
+            <button class="zoom-btn active" data-zoom="4">4x</button>
+            <button class="zoom-btn" data-zoom="8">8x</button>
+          </div>
+        </div>
+
+        <div class="views-container">
+          <!-- 左侧：AI 原始输入 -->
+          <div class="view-card">
+            <div class="view-title">
+              <span>原始输入 (AI Raw)</span>
+              <span id="raw-res-meta">-</span>
+            </div>
+            <div class="view-body">
+              <img id="img-original" class="original-target-img" alt="原始图像">
+            </div>
+          </div>
+
+          <!-- 右侧：真像素成品 -->
+          <div class="view-card">
+            <div class="view-title">
+              <span style="color:var(--accent-cyan);">真像素成品 (True-Pixel)</span>
+              <span id="pixel-res-meta" style="color:var(--accent-gold);">-</span>
+            </div>
+            <div class="view-body">
+              <img id="img-pixel" class="pixel-target-img" alt="真像素成品">
+            </div>
+          </div>
+        </div>
+
+        <!-- 底部元信息与下载操作 -->
+        <div class="action-bar">
+          <div class="meta-tags">
+            <div class="meta-tag-item">处理耗时: <strong id="meta-time">-</strong></div>
+            <div class="meta-tag-item">实际调色板: <strong id="meta-colors">-</strong></div>
+            <div class="meta-tag-item">1px 硬描边: <strong id="meta-outline">已生效</strong></div>
+          </div>
+          <div class="btn-group">
+            <button class="btn btn-secondary" id="btn-download-hd">🖼️ 下载 4x 高清展示图</button>
+            <button class="btn btn-primary" id="btn-download-native">💾 下载原生像素透明 PNG</button>
+            <button class="btn btn-secondary" id="btn-download-batch-zip" style="display:none;">📦 打包下载全部 (ZIP)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // 全局状态
+    const state = {
+      targetSize: 96,
+      colorCount: 32,
+      removeBg: true,
+      applyOutline: true,
+      outlineColor: '#12141a',
+      noiseArea: 18,
+      zoom: 4,
+      currentRawBase64: null,
+      currentNativeBase64: null,
+      currentPreview4xBase64: null,
+      batchItems: [], // { name, rawBase64, nativeBase64, preview4xBase64, size }
+      currentBatchIndex: 0
+    };
+
+    // DOM 元素引用
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('file-input');
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingText = document.getElementById('loading-text');
+    const imgOriginal = document.getElementById('img-original');
+    const imgPixel = document.getElementById('img-pixel');
+    const btnDownloadNative = document.getElementById('btn-download-native');
+    const btnDownloadHd = document.getElementById('btn-download-hd');
+    const btnDownloadBatchZip = document.getElementById('btn-download-batch-zip');
+    const batchTray = document.getElementById('batch-tray');
+
+    // 初始化控制项监听
+    document.querySelectorAll('.capsule-btn[data-size]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.capsule-btn[data-size]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.targetSize = parseInt(btn.dataset.size);
+        document.getElementById('lbl-resolution').innerText = `${state.targetSize} × ${state.targetSize}`;
+        if (state.currentRawBase64) reprocessCurrent();
+      });
+    });
+
+    document.getElementById('range-colors').addEventListener('input', (e) => {
+      state.colorCount = parseInt(e.target.value);
+      document.getElementById('lbl-colors').innerText = `${state.colorCount} 色`;
+    });
+    document.getElementById('range-colors').addEventListener('change', () => {
+      if (state.currentRawBase64) reprocessCurrent();
+    });
+
+    document.getElementById('chk-rembg').addEventListener('change', (e) => {
+      state.removeBg = e.target.checked;
+      if (state.currentRawBase64) reprocessCurrent();
+    });
+
+    document.getElementById('chk-outline').addEventListener('change', (e) => {
+      state.applyOutline = e.target.checked;
+      document.getElementById('outline-color-group').style.display = state.applyOutline ? 'block' : 'none';
+      if (state.currentRawBase64) reprocessCurrent();
+    });
+
+    document.getElementById('picker-outline-color').addEventListener('change', (e) => {
+      state.outlineColor = e.target.value;
+      document.getElementById('lbl-outline-color').innerText = state.outlineColor;
+      if (state.currentRawBase64) reprocessCurrent();
+    });
+
+    document.getElementById('range-noise').addEventListener('input', (e) => {
+      state.noiseArea = parseInt(e.target.value);
+      document.getElementById('lbl-noise').innerText = `${state.noiseArea} px`;
+    });
+    document.getElementById('range-noise').addEventListener('change', () => {
+      if (state.currentRawBase64) reprocessCurrent();
+    });
+
+    // 缩放切换
+    document.querySelectorAll('.zoom-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.zoom = parseInt(btn.dataset.zoom);
+        applyZoom();
+      });
+    });
+
+    function applyZoom() {
+      imgPixel.style.transform = `scale(${state.zoom / 4})`;
+      imgOriginal.style.transform = `scale(${Math.min(1.5, state.zoom / 4)})`;
+    }
+
+    // 拖拽文件事件
+    ['dragenter', 'dragover'].forEach(name => {
+      dropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(name => {
+      dropzone.addEventListener(name, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+      });
+    });
+
+    dropzone.addEventListener('drop', (e) => {
+      const files = e.dataTransfer.files;
+      if (files.length > 0) handleFiles(files);
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) handleFiles(e.target.files);
+    });
+
+    // 剪贴板 Ctrl+V 粘贴
+    window.addEventListener('paste', (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.indexOf('image') !== -1) {
+          const file = item.getAsFile();
+          handleFiles([file]);
+          break;
+        }
+      }
+    });
+
+    // 处理选中的文件
+    async function handleFiles(files) {
+      if (files.length === 1) {
+        const file = files[0];
+        const base64 = await fileToBase64(file);
+        state.batchItems = [];
+        batchTray.style.display = 'none';
+        btnDownloadBatchZip.style.display = 'none';
+        processSingle(file.name, base64);
+      } else {
+        // 多图批量处理
+        state.batchItems = [];
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const b64 = await fileToBase64(file);
+          state.batchItems.push({
+            name: file.name,
+            rawBase64: b64,
+            nativeBase64: null,
+            preview4xBase64: null,
+            status: 'pending'
+          });
+        }
+        renderBatchTray();
+        processBatchQueue();
+      }
+    }
+
+    function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function renderBatchTray() {
+      batchTray.innerHTML = '';
+      batchTray.style.display = 'grid';
+      btnDownloadBatchZip.style.display = 'flex';
+
+      state.batchItems.forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = `batch-item-thumb ${idx === state.currentBatchIndex ? 'active' : ''}`;
+        div.innerHTML = `<img src="${item.preview4xBase64 || item.rawBase64}" alt="${item.name}">`;
+        div.onclick = () => selectBatchItem(idx);
+        batchTray.appendChild(div);
+      });
+    }
+
+    function selectBatchItem(index) {
+      state.currentBatchIndex = index;
+      renderBatchTray();
+      const item = state.batchItems[index];
+      if (item) {
+        state.currentRawBase64 = item.rawBase64;
+        state.currentNativeBase64 = item.nativeBase64;
+        state.currentPreview4xBase64 = item.preview4xBase64;
+        imgOriginal.src = item.rawBase64;
+        imgPixel.src = item.nativeBase64 || item.rawBase64;
+        document.getElementById('item-title-meta').innerText = `• ${item.name}`;
+      }
+    }
+
+    async function processBatchQueue() {
+      for (let i = 0; i < state.batchItems.length; i++) {
+        const item = state.batchItems[i];
+        selectBatchItem(i);
+        loadingOverlay.classList.add('active');
+        loadingText.innerText = `正在处理第 ${i + 1}/${state.batchItems.length} 张: ${item.name}...`;
+
+        try {
+          const res = await callProcessApi(item.rawBase64);
+          item.nativeBase64 = res.native_base64;
+          item.preview4xBase64 = res.preview4x_base64;
+          item.status = 'done';
+          state.currentNativeBase64 = res.native_base64;
+          state.currentPreview4xBase64 = res.preview4x_base64;
+          imgPixel.src = res.native_base64;
+          renderBatchTray();
+        } catch (err) {
+          console.error(err);
+        }
+      }
+      loadingOverlay.classList.remove('active');
+    }
+
+    async function processSingle(fileName, base64) {
+      state.currentRawBase64 = base64;
+      imgOriginal.src = base64;
+      document.getElementById('item-title-meta').innerText = `• ${fileName}`;
+
+      loadingOverlay.classList.add('active');
+      loadingText.innerText = 'AI 正在深度去除背景并生成真像素调色板...';
+
+      const t0 = performance.now();
+      try {
+        const res = await callProcessApi(base64);
+        const t1 = performance.now();
+        state.currentNativeBase64 = res.native_base64;
+        state.currentPreview4xBase64 = res.preview4x_base64;
+        imgPixel.src = res.native_base64;
+
+        document.getElementById('raw-res-meta').innerText = `${res.raw_width} × ${res.raw_height}`;
+        document.getElementById('pixel-res-meta').innerText = `${res.target_size} × ${res.target_size} Px`;
+        document.getElementById('meta-time').innerText = `${Math.round(t1 - t0)} ms`;
+        document.getElementById('meta-colors').innerText = `${res.actual_colors || state.colorCount} 色`;
+        document.getElementById('meta-outline').innerText = state.applyOutline ? '已生成 1px 闭合' : '无';
+      } catch (err) {
+        alert('转换失败: ' + err.message);
+      } finally {
+        loadingOverlay.classList.remove('active');
+      }
+    }
+
+    function reprocessCurrent() {
+      if (state.currentRawBase64) {
+        processSingle(document.getElementById('item-title-meta').innerText.replace('• ', '') || 'image.png', state.currentRawBase64);
+      }
+    }
+
+    async function callProcessApi(base64Data) {
+      const resp = await fetch('/api/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          image_base64: base64Data,
+          target_size: state.targetSize,
+          color_count: state.colorCount,
+          remove_bg: state.removeBg,
+          apply_outline: state.applyOutline,
+          outline_color: hexToRgb(state.outlineColor),
+          noise_area: state.noiseArea
+        })
+      });
+      if (!resp.ok) {
+        const text = await resp.text();
+        throw new Error(text);
+      }
+      return await resp.json();
+    }
+
+    function hexToRgb(hex) {
+      const val = parseInt(hex.replace('#', ''), 16);
+      return [(val >> 16) & 255, (val >> 8) & 255, val & 255];
+    }
+
+    // 下载功能
+    btnDownloadNative.addEventListener('click', () => {
+      if (!state.currentNativeBase64) return;
+      downloadDataUrl(state.currentNativeBase64, `true_pixel_${state.targetSize}x${state.targetSize}.png`);
+    });
+
+    btnDownloadHd.addEventListener('click', () => {
+      if (!state.currentPreview4xBase64) return;
+      downloadDataUrl(state.currentPreview4xBase64, `true_pixel_preview_${state.targetSize * 4}x${state.targetSize * 4}.png`);
+    });
+
+    btnDownloadBatchZip.addEventListener('click', async () => {
+      if (state.batchItems.length === 0) return;
+      loadingOverlay.classList.add('active');
+      loadingText.innerText = '正在打包所有真像素资产为 ZIP...';
+      try {
+        const resp = await fetch('/api/download_zip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            items: state.batchItems.map(it => ({
+              name: it.name.replace(/\.[^/.]+$/, ''),
+              native_base64: it.nativeBase64,
+              preview4x_base64: it.preview4xBase64
+            }))
+          })
+        });
+        const blob = await resp.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `true_pixel_assets_${Date.now()}.zip`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert('打包失败: ' + err.message);
+      } finally {
+        loadingOverlay.classList.remove('active');
+      }
+    });
+
+    function downloadDataUrl(dataUrl, filename) {
+      const a = document.createElement('a');
+      a.href = dataUrl;
+      a.download = filename;
+      a.click();
+    }
+
+    // 预置 Demo 图片
+    document.getElementById('btn-demo-sword').addEventListener('click', () => loadDemo('/examples/divine_flying_sword.jpg', 'flying_sword.jpg'));
+    document.getElementById('btn-demo-ring').addEventListener('click', () => loadDemo('/examples/bagua_spirit_mirror.jpg', 'spirit_mirror.jpg'));
+    document.getElementById('btn-demo-boots').addEventListener('click', () => loadDemo('/examples/celestial_daoist_robe.jpg', 'daoist_robe.jpg'));
+
+    async function loadDemo(url, name) {
+      try {
+        const resp = await fetch(url);
+        const blob = await resp.blob();
+        const base64 = await fileToBase64(blob);
+        processSingle(name, base64);
+      } catch (e) {
+        console.error('Demo load failed', e);
+      }
+    }
+  </script>
+</body>
+</html>
