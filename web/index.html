@@ -156,7 +156,7 @@
     /* 选项胶囊按钮 */
     .capsule-group {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 6px;
     }
 
@@ -641,6 +641,9 @@
             <button class="capsule-btn" data-size="64">64px</button>
             <button class="capsule-btn active" data-size="96">96px</button>
             <button class="capsule-btn" data-size="128">128px</button>
+            <button class="capsule-btn" data-size="256">256px</button>
+            <button class="capsule-btn" data-size="512">512px</button>
+            <button class="capsule-btn" data-size="1024">1024px</button>
           </div>
         </div>
 
@@ -650,7 +653,7 @@
             <span>复古调色板颜色数</span>
             <span class="value-badge" id="lbl-colors">32 色</span>
           </div>
-          <input type="range" id="range-colors" min="8" max="64" step="4" value="32">
+          <input type="range" id="range-colors" min="8" max="128" step="4" value="32">
         </div>
 
         <!-- AI 背景移除开关 -->

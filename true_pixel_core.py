@@ -147,7 +147,9 @@ def process_image(
     else:
         native_img = canvas
 
-    # 7. 4x Nearest-Neighbor HD Preview
-    preview_4x = native_img.resize((target_size * 4, target_size * 4), Image.Resampling.NEAREST)
+    # 7. Nearest-Neighbor HD Preview (clamped to max 2048 to prevent excessive payload)
+    preview_scale = 4 if target_size <= 256 else (2 if target_size <= 512 else 1)
+    preview_w = target_size * preview_scale
+    preview_4x = native_img.resize((preview_w, preview_w), Image.Resampling.NEAREST)
 
     return native_img, preview_4x
