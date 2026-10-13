@@ -331,6 +331,47 @@
       top: 0; left: 0; width: 100%; height: 100%;
       opacity: 0;
       cursor: pointer;
+      z-index: 10;
+    }
+
+    .dropzone > *:not(input[type="file"]) {
+      pointer-events: none;
+    }
+
+    /* 自由拖拽微调指示样式 */
+    .pixel-frame.draggable {
+      cursor: grab;
+      user-select: none;
+    }
+
+    .pixel-frame.draggable:active, .pixel-frame.dragging {
+      cursor: grabbing;
+    }
+
+    .drag-hint-badge {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(12, 18, 30, 0.9);
+      border: 1px solid var(--accent-cyan);
+      color: var(--accent-cyan);
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 12px;
+      border-radius: 20px;
+      pointer-events: none;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      z-index: 20;
+      box-shadow: 0 0 12px rgba(0, 240, 255, 0.35);
+      animation: pulse-glow 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-glow {
+      0%, 100% { opacity: 0.9; transform: translateX(-50%) scale(1); }
+      50% { opacity: 1; transform: translateX(-50%) scale(1.03); }
     }
 
     /* 对比视图卡片 */
@@ -788,6 +829,40 @@
               <button class="capsule-btn" data-blend="normal">正常 (Alpha)</button>
             </div>
           </div>
+
+          <!-- 图层上下叠放层级选择 -->
+          <div class="form-group" id="layer-order-wrap" style="display:none; margin-top: 14px;">
+            <div class="form-label">
+              <span>🔀 图层叠放上下层级</span>
+              <span class="value-badge" id="lbl-layer-order">特效在顶 (前置光效)</span>
+            </div>
+            <div class="capsule-group" style="grid-template-columns: 1fr 1fr;">
+              <button class="capsule-btn active" data-order="vfx_on_top">✨ 特效在顶 (覆盖前)</button>
+              <button class="capsule-btn" data-order="solid_on_top">🗡️ 实体在顶 (背景光晕)</button>
+            </div>
+          </div>
+
+          <!-- 特效位置偏移微调 -->
+          <div class="form-group" id="layer-transform-wrap" style="display:none; margin-top: 14px;">
+            <div class="form-label">
+              <span>🎯 特效位置偏移 (可在右图直接拖动)</span>
+              <button class="capsule-btn" id="btn-reset-offset" style="padding: 2px 8px; font-size: 11px;">居中复位</button>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+              <div>
+                <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                  <span>水平 X:</span><strong id="lbl-offset-x" style="color:var(--accent-cyan);">0 px</strong>
+                </div>
+                <input type="range" id="range-offset-x" min="-48" max="48" step="1" value="0" style="margin-top:4px;">
+              </div>
+              <div>
+                <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                  <span>垂直 Y:</span><strong id="lbl-offset-y" style="color:var(--accent-cyan);">0 px</strong>
+                </div>
+                <input type="range" id="range-offset-y" min="-48" max="48" step="1" value="0" style="margin-top:4px;">
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 开始生成操作按钮 -->
@@ -895,6 +970,7 @@
                 <img id="img-pixel" class="pixel-target-img" alt="真像素成品">
                 <div class="pixel-grid-overlay" id="pixel-grid-overlay"></div>
               </div>
+              <div class="drag-hint-badge" id="drag-hint-badge">✥ 按住鼠标左键可自由拖拽特效位置</div>
             </div>
           </div>
         </div>
@@ -1008,6 +1084,11 @@
       noiseArea: 18,
       glowGain: 115,
       blendMode: 'additive',
+      offsetX: 0,
+      offsetY: 0,
+      layerOrder: 'vfx_on_top', // 'vfx_on_top' | 'solid_on_top'
+      compositeLayer1Img: null,
+      compositeLayer2Img: null,
       zoom: 'fit',
       currentRawBase64: null,
       currentNativeBase64: null,
@@ -1047,6 +1128,10 @@
         document.getElementById('solid-controls-group').style.display = isVfx ? 'none' : 'block';
         document.getElementById('vfx-controls-group').style.display = (isVfx || isComposite) ? 'block' : 'none';
         document.getElementById('blend-mode-wrap').style.display = isComposite ? 'block' : 'none';
+        document.getElementById('layer-order-wrap').style.display = isComposite ? 'block' : 'none';
+        document.getElementById('layer-transform-wrap').style.display = isComposite ? 'block' : 'none';
+        document.getElementById('drag-hint-badge').style.display = isComposite ? 'flex' : 'none';
+        document.getElementById('pixel-frame').classList.toggle('draggable', isComposite);
 
         document.getElementById('dropzone').style.display = isComposite ? 'none' : 'block';
         document.getElementById('composite-dropzone-wrap').style.display = isComposite ? 'grid' : 'none';
@@ -1061,6 +1146,7 @@
         state.blendMode = btn.dataset.blend;
         const blendNames = { additive: '加色发光 (Additive)', screen: '滤色 (Screen)', normal: '正常 (Alpha)' };
         document.getElementById('lbl-blend').innerText = blendNames[state.blendMode];
+        updateLiveComposite();
       });
     });
 
@@ -1068,6 +1154,42 @@
     document.getElementById('range-glow').addEventListener('input', (e) => {
       state.glowGain = parseInt(e.target.value);
       document.getElementById('lbl-glow').innerText = `${state.glowGain}%`;
+      updateLiveComposite();
+    });
+
+    // 图层叠放上下层级切换
+    document.querySelectorAll('.capsule-btn[data-order]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.capsule-btn[data-order]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.layerOrder = btn.dataset.order;
+        const orderNames = { vfx_on_top: '✨ 特效在顶 (前置光效)', solid_on_top: '🗡️ 实体在顶 (背景光晕)' };
+        document.getElementById('lbl-layer-order').innerText = orderNames[state.layerOrder];
+        updateLiveComposite();
+      });
+    });
+
+    // 特效位置偏移滑块
+    document.getElementById('range-offset-x').addEventListener('input', (e) => {
+      state.offsetX = parseInt(e.target.value) || 0;
+      document.getElementById('lbl-offset-x').innerText = `${state.offsetX} px`;
+      updateLiveComposite();
+    });
+
+    document.getElementById('range-offset-y').addEventListener('input', (e) => {
+      state.offsetY = parseInt(e.target.value) || 0;
+      document.getElementById('lbl-offset-y').innerText = `${state.offsetY} px`;
+      updateLiveComposite();
+    });
+
+    document.getElementById('btn-reset-offset').addEventListener('click', () => {
+      state.offsetX = 0;
+      state.offsetY = 0;
+      document.getElementById('range-offset-x').value = 0;
+      document.getElementById('range-offset-y').value = 0;
+      document.getElementById('lbl-offset-x').innerText = '0 px';
+      document.getElementById('lbl-offset-y').innerText = '0 px';
+      updateLiveComposite();
     });
 
     // 初始化控制项监听
@@ -1160,21 +1282,35 @@
       }
     });
 
+    dropzoneL1.addEventListener('click', (e) => {
+      const input = document.getElementById('file-layer1');
+      if (e.target !== input) input.click();
+    });
+
+    dropzoneL2.addEventListener('click', (e) => {
+      const input = document.getElementById('file-layer2');
+      if (e.target !== input) input.click();
+    });
+
     document.getElementById('file-layer1').addEventListener('change', async (e) => {
-      if (e.target.files.length > 0) {
-        state.layer1Base64 = await fileToBase64(e.target.files[0]);
-        document.getElementById('lbl-l1-status').innerText = `已载入: ${e.target.files[0].name}`;
+      if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0];
+        state.layer1Base64 = await fileToBase64(file);
+        document.getElementById('lbl-l1-status').innerText = `已载入: ${file.name}`;
         imgOriginal.src = state.layer1Base64;
         state.currentRawBase64 = state.layer1Base64;
         applyZoom();
       }
+      e.target.value = '';
     });
 
     document.getElementById('file-layer2').addEventListener('change', async (e) => {
-      if (e.target.files.length > 0) {
-        state.layer2Base64 = await fileToBase64(e.target.files[0]);
-        document.getElementById('lbl-l2-status').innerText = `已载入: ${e.target.files[0].name}`;
+      if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0];
+        state.layer2Base64 = await fileToBase64(file);
+        document.getElementById('lbl-l2-status').innerText = `已载入: ${file.name}`;
       }
+      e.target.value = '';
     });
 
     // 资产生图规范指南弹窗逻辑
@@ -1418,6 +1554,20 @@
         imgPixel.src = res.native_base64;
         applyZoom();
 
+        // 缓存合体图层用于前端 60FPS 实时拖拽合成
+        if (res.layer1_base64 && res.layer2_base64) {
+          const l1 = new Image();
+          l1.onload = () => {
+            state.compositeLayer1Img = l1;
+            const l2 = new Image();
+            l2.onload = () => {
+              state.compositeLayer2Img = l2;
+            };
+            l2.src = res.layer2_base64;
+          };
+          l1.src = res.layer1_base64;
+        }
+
         document.getElementById('raw-res-meta').innerText = `${res.raw_width} × ${res.raw_height}`;
         document.getElementById('pixel-res-meta').innerText = `${res.target_size} × ${res.target_size} Px`;
         document.getElementById('meta-time').innerText = `${Math.round(t1 - t0)} ms`;
@@ -1460,7 +1610,10 @@
           outline_color: hexToRgb(state.outlineColor),
           noise_area: state.noiseArea,
           glow_intensity: state.glowGain / 100,
-          blend_mode: state.blendMode
+          blend_mode: state.blendMode,
+          offset_x: state.offsetX,
+          offset_y: state.offsetY,
+          layer_order: state.layerOrder
         })
       });
       if (!resp.ok) {
@@ -1554,7 +1707,12 @@
         imgOriginal.src = resL1;
         document.getElementById('lbl-l1-status').innerText = '已载入: demo_sword_body.png';
         document.getElementById('lbl-l2-status').innerText = '已载入: demo_sword_aura.png';
-        document.getElementById('item-title-meta').innerText = '• 实体飞剑 + 极光剑气 (已就绪)';
+        state.offsetX = 0;
+        state.offsetY = 0;
+        if (document.getElementById('range-offset-x')) document.getElementById('range-offset-x').value = 0;
+        if (document.getElementById('range-offset-y')) document.getElementById('range-offset-y').value = 0;
+        if (document.getElementById('lbl-offset-x')) document.getElementById('lbl-offset-x').innerText = '0 px';
+        if (document.getElementById('lbl-offset-y')) document.getElementById('lbl-offset-y').innerText = '0 px';
         applyZoom();
         await processSingle('飞剑+剑气双层发光合体', resL1);
       } catch (e) {
@@ -1582,6 +1740,92 @@
       } catch (e) {
         console.error('Demo load failed', e);
       }
+    }
+
+    // 前端 60FPS 实时合体渲染与鼠标自由拖拽
+    const pixelFrame = document.getElementById('pixel-frame');
+    let isDraggingLayer = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let dragInitOffsetX = 0;
+    let dragInitOffsetY = 0;
+
+    pixelFrame.addEventListener('mousedown', (e) => {
+      if (state.mode !== 'composite') return;
+      e.preventDefault();
+      isDraggingLayer = true;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      dragInitOffsetX = state.offsetX;
+      dragInitOffsetY = state.offsetY;
+      pixelFrame.classList.add('dragging');
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDraggingLayer) return;
+      e.preventDefault();
+      const curRenderWidth = imgPixel.clientWidth || 340;
+      const zoomRatio = curRenderWidth / (state.targetSize || 96);
+      const dx = Math.round((e.clientX - dragStartX) / zoomRatio);
+      const dy = Math.round((e.clientY - dragStartY) / zoomRatio);
+
+      state.offsetX = Math.max(-48, Math.min(48, dragInitOffsetX + dx));
+      state.offsetY = Math.max(-48, Math.min(48, dragInitOffsetY + dy));
+
+      const rangeX = document.getElementById('range-offset-x');
+      const rangeY = document.getElementById('range-offset-y');
+      if (rangeX) rangeX.value = state.offsetX;
+      if (rangeY) rangeY.value = state.offsetY;
+      document.getElementById('lbl-offset-x').innerText = `${state.offsetX} px`;
+      document.getElementById('lbl-offset-y').innerText = `${state.offsetY} px`;
+
+      updateLiveComposite();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (isDraggingLayer) {
+        isDraggingLayer = false;
+        pixelFrame.classList.remove('dragging');
+      }
+    });
+
+    function updateLiveComposite() {
+      if (state.mode !== 'composite' || !state.compositeLayer1Img || !state.compositeLayer2Img) return;
+      const canvas = document.createElement('canvas');
+      canvas.width = state.targetSize;
+      canvas.height = state.targetSize;
+      const ctx = canvas.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+
+      const isSolidTop = (state.layerOrder === 'solid_on_top');
+
+      function drawSolid() {
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.drawImage(state.compositeLayer1Img, 0, 0, state.targetSize, state.targetSize);
+      }
+
+      function drawVfx() {
+        if (state.blendMode === 'additive') {
+          ctx.globalCompositeOperation = 'lighter';
+        } else if (state.blendMode === 'screen') {
+          ctx.globalCompositeOperation = 'screen';
+        } else {
+          ctx.globalCompositeOperation = 'source-over';
+        }
+        ctx.drawImage(state.compositeLayer2Img, state.offsetX, state.offsetY, state.targetSize, state.targetSize);
+      }
+
+      if (isSolidTop) {
+        drawVfx();
+        drawSolid();
+      } else {
+        drawSolid();
+        drawVfx();
+      }
+
+      const liveUrl = canvas.toDataURL();
+      imgPixel.src = liveUrl;
+      state.currentNativeBase64 = liveUrl;
     }
 
     // 放大预览弹窗逻辑

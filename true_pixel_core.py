@@ -266,13 +266,24 @@ def composite_layers(
     solid_img: Image.Image,
     vfx_img: Image.Image,
     glow_intensity: float = 1.15,
-    blend_mode: str = "additive"
+    blend_mode: str = "additive",
+    offset_x: int = 0,
+    offset_y: int = 0,
+    layer_order: str = "vfx_on_top"
 ) -> Image.Image:
     """
     Composite Layer 1 (Solid Weapon/Item) and Layer 2 (Glowing Aura/VFX) with game-engine grade blending.
+    Supports movable VFX offset (offset_x, offset_y) and layer stacking order (vfx_on_top vs solid_on_top).
     """
-    if vfx_img.size != solid_img.size:
-        vfx_img = vfx_img.resize(solid_img.size, Image.Resampling.NEAREST)
+    tw, th = solid_img.size
+    if vfx_img.size != (tw, th):
+        vfx_img = vfx_img.resize((tw, th), Image.Resampling.NEAREST)
+
+    # Apply translation offset to VFX layer if requested
+    if offset_x != 0 or offset_y != 0:
+        vfx_shifted = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+        vfx_shifted.paste(vfx_img, (offset_x, offset_y), vfx_img)
+        vfx_img = vfx_shifted
 
     s_arr = np.array(solid_img.convert("RGBA"), dtype=np.float32)
     v_arr = np.array(vfx_img.convert("RGBA"), dtype=np.float32)
@@ -281,24 +292,48 @@ def composite_layers(
     vr, vg, vb, va = v_arr[:, :, 0], v_arr[:, :, 1], v_arr[:, :, 2], (v_arr[:, :, 3] / 255.0) * glow_intensity
     va = np.clip(va, 0.0, 1.0)
 
+    is_solid_top = (layer_order == "solid_on_top")
+
     if blend_mode == "additive":
-        # Pure luminous additive blending (VFX illuminates solid & background)
-        cr = np.clip(sr * sa + vr * va, 0.0, 255.0)
-        cg = np.clip(sg * sa + vg * va, 0.0, 255.0)
-        cb = np.clip(sb * sa + vb * va, 0.0, 255.0)
-        ca = np.clip(sa + va * (1.0 - sa * 0.4), 0.0, 1.0) * 255.0
+        if is_solid_top:
+            # Solid in front, glowing VFX shines behind and around solid
+            cr = np.clip(sr * sa + vr * va * (1.0 - sa * 0.7), 0.0, 255.0)
+            cg = np.clip(sg * sa + vg * va * (1.0 - sa * 0.7), 0.0, 255.0)
+            cb = np.clip(sb * sa + vb * va * (1.0 - sa * 0.7), 0.0, 255.0)
+            ca = np.clip(sa + va * (1.0 - sa), 0.0, 1.0) * 255.0
+        else:
+            # VFX illuminates on top of solid & background
+            cr = np.clip(sr * sa + vr * va, 0.0, 255.0)
+            cg = np.clip(sg * sa + vg * va, 0.0, 255.0)
+            cb = np.clip(sb * sa + vb * va, 0.0, 255.0)
+            ca = np.clip(sa + va * (1.0 - sa * 0.4), 0.0, 1.0) * 255.0
     elif blend_mode == "screen":
-        # Screen blending
-        cr = 255.0 * (1.0 - (1.0 - (sr * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
-        cg = 255.0 * (1.0 - (1.0 - (sg * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
-        cb = 255.0 * (1.0 - (1.0 - (sb * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
-        ca = np.clip(sa + va, 0.0, 1.0) * 255.0
-    else:
-        # Normal alpha blend (VFX placed on top)
-        cr = vr * va + sr * sa * (1.0 - va)
-        cg = vg * va + sg * sa * (1.0 - va)
-        cb = vb * va + sb * sa * (1.0 - va)
-        ca = (va + sa * (1.0 - va)) * 255.0
+        if is_solid_top:
+            screen_r = 255.0 * (1.0 - (1.0 - (sr * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+            screen_g = 255.0 * (1.0 - (1.0 - (sg * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+            screen_b = 255.0 * (1.0 - (1.0 - (sb * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+            cr = sr * sa + screen_r * (1.0 - sa)
+            cg = sg * sa + screen_g * (1.0 - sa)
+            cb = sb * sa + screen_b * (1.0 - sa)
+            ca = np.clip(sa + va * (1.0 - sa), 0.0, 1.0) * 255.0
+        else:
+            cr = 255.0 * (1.0 - (1.0 - (sr * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+            cg = 255.0 * (1.0 - (1.0 - (sg * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+            cb = 255.0 * (1.0 - (1.0 - (sb * sa / 255.0)) * (1.0 - (vr * va / 255.0)))
+            ca = np.clip(sa + va, 0.0, 1.0) * 255.0
+    else:  # normal alpha blend
+        if is_solid_top:
+            # Solid placed on top of VFX
+            cr = sr * sa + vr * va * (1.0 - sa)
+            cg = sg * sa + vg * va * (1.0 - sa)
+            cb = sb * sa + vb * va * (1.0 - sa)
+            ca = (sa + va * (1.0 - sa)) * 255.0
+        else:
+            # VFX placed on top of solid
+            cr = vr * va + sr * sa * (1.0 - va)
+            cg = vg * va + sg * sa * (1.0 - va)
+            cb = vb * va + sb * sa * (1.0 - va)
+            ca = (va + sa * (1.0 - va)) * 255.0
 
     comp = np.dstack([cr, cg, cb, ca]).astype(np.uint8)
     return Image.fromarray(comp, mode="RGBA")

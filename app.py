@@ -82,6 +82,9 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
             noise_area = int(data.get("noise_area", 18))
             glow_intensity = float(data.get("glow_intensity", 1.15))
             blend_mode = str(data.get("blend_mode", "additive"))
+            offset_x = int(data.get("offset_x", 0))
+            offset_y = int(data.get("offset_y", 0))
+            layer_order = str(data.get("layer_order", "vfx_on_top"))
 
             def b64_to_pil(b64_str):
                 if not b64_str:
@@ -126,7 +129,10 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
                     solid_img=solid_native,
                     vfx_img=vfx_native,
                     glow_intensity=glow_intensity,
-                    blend_mode=blend_mode
+                    blend_mode=blend_mode,
+                    offset_x=offset_x,
+                    offset_y=offset_y,
+                    layer_order=layer_order
                 )
 
                 preview_scale = 4 if target_size <= 256 else (2 if target_size <= 512 else 1)
