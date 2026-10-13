@@ -293,18 +293,30 @@ def composite_layers(
     blend_mode: str = "additive",
     offset_x: int = 0,
     offset_y: int = 0,
+    scale_x: float = 1.0,
+    scale_y: float = 1.0,
     layer_order: str = "vfx_on_top"
 ) -> Image.Image:
     """
     Composite Layer 1 (Solid Weapon/Item) and Layer 2 (Glowing Aura/VFX) with game-engine grade blending.
-    Supports movable VFX offset (offset_x, offset_y) and layer stacking order (vfx_on_top vs solid_on_top).
+    Supports movable VFX offset (offset_x, offset_y), free scaling & stretching (scale_x, scale_y),
+    and layer stacking order (vfx_on_top vs solid_on_top).
     """
     tw, th = solid_img.size
     if vfx_img.size != (tw, th):
         vfx_img = vfx_img.resize((tw, th), Image.Resampling.NEAREST)
 
-    # Apply translation offset to VFX layer if requested
-    if offset_x != 0 or offset_y != 0:
+    # Apply scaling, stretching and offset to VFX layer
+    if scale_x != 1.0 or scale_y != 1.0:
+        new_w = max(1, int(round(tw * scale_x)))
+        new_h = max(1, int(round(th * scale_y)))
+        vfx_scaled = vfx_img.resize((new_w, new_h), Image.Resampling.BILINEAR)
+        vfx_canvas = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+        paste_x = (tw - new_w) // 2 + offset_x
+        paste_y = (th - new_h) // 2 + offset_y
+        vfx_canvas.paste(vfx_scaled, (paste_x, paste_y), vfx_scaled)
+        vfx_img = vfx_canvas
+    elif offset_x != 0 or offset_y != 0:
         vfx_shifted = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
         vfx_shifted.paste(vfx_img, (offset_x, offset_y), vfx_img)
         vfx_img = vfx_shifted

@@ -905,26 +905,58 @@
             </div>
           </div>
 
-          <!-- 特效位置偏移微调 -->
+          <!-- 特效自由拉伸与位置偏移微调 -->
           <div class="form-group" id="layer-transform-wrap" style="display:none; margin-top: 14px;">
             <div class="form-label">
-              <span>🎯 特效位置偏移 (可在右图直接拖动)</span>
-              <button class="capsule-btn" id="btn-reset-offset" style="padding: 2px 8px; font-size: 11px;">居中复位</button>
+              <span>🎯 特效自由拉伸与对齐</span>
+              <button class="capsule-btn" id="btn-reset-offset" style="padding: 2px 8px; font-size: 11px;">全部复位</button>
             </div>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:8px;">
+
+            <!-- 自由拉伸控制卡片 -->
+            <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-top: 8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:12px; font-weight:600; color:var(--text-main);">⤢ 自由拉伸/缩放 (匹配道具)</span>
+                <label style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                  <input type="checkbox" id="chk-lock-ratio" checked style="cursor:pointer;">
+                  <span>等比缩放</span>
+                </label>
+              </div>
+
+              <!-- 宽度拉伸 / 缩放 -->
               <div>
                 <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
-                  <span>水平 X:</span><strong id="lbl-offset-x" style="color:var(--accent-cyan);">0 px</strong>
+                  <span id="lbl-scale-x-name">宽度拉伸 / 整体缩放:</span>
+                  <strong id="lbl-scale-x" style="color:var(--accent-cyan);">100%</strong>
                 </div>
-                <input type="range" id="range-offset-x" min="-48" max="48" step="1" value="0" style="margin-top:4px;">
+                <input type="range" id="range-scale-x" min="20" max="300" step="2" value="100" style="margin-top:4px;">
+              </div>
+
+              <!-- 高度拉伸 -->
+              <div style="margin-top:8px;">
+                <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                  <span>高度拉伸:</span>
+                  <strong id="lbl-scale-y" style="color:var(--accent-cyan);">100%</strong>
+                </div>
+                <input type="range" id="range-scale-y" min="20" max="300" step="2" value="100" style="margin-top:4px;">
+              </div>
+            </div>
+
+            <!-- 位置偏移微调 -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
+              <div>
+                <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                  <span>水平平移 X:</span><strong id="lbl-offset-x" style="color:var(--accent-cyan);">0 px</strong>
+                </div>
+                <input type="range" id="range-offset-x" min="-64" max="64" step="1" value="0" style="margin-top:4px;">
               </div>
               <div>
                 <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
-                  <span>垂直 Y:</span><strong id="lbl-offset-y" style="color:var(--accent-cyan);">0 px</strong>
+                  <span>垂直平移 Y:</span><strong id="lbl-offset-y" style="color:var(--accent-cyan);">0 px</strong>
                 </div>
-                <input type="range" id="range-offset-y" min="-48" max="48" step="1" value="0" style="margin-top:4px;">
+                <input type="range" id="range-offset-y" min="-64" max="64" step="1" value="0" style="margin-top:4px;">
               </div>
             </div>
+            <div class="switch-subtext" style="margin-top: 6px;">💡 可在右侧预览画布直接拖拽移动位置，按滑块自由拉伸特效匹配道具。</div>
           </div>
         </div>
 
@@ -1161,6 +1193,9 @@
       blendMode: 'additive',
       offsetX: 0,
       offsetY: 0,
+      scaleX: 100,
+      scaleY: 100,
+      lockRatio: true,
       layerOrder: 'vfx_on_top', // 'vfx_on_top' | 'solid_on_top'
       compositeLayer1Img: null,
       compositeLayer2Img: null,
@@ -1290,6 +1325,54 @@
       });
     });
 
+    // 特效自由拉伸与缩放滑块
+    const rangeScaleX = document.getElementById('range-scale-x');
+    const rangeScaleY = document.getElementById('range-scale-y');
+    const chkLockRatio = document.getElementById('chk-lock-ratio');
+    const lblScaleX = document.getElementById('lbl-scale-x');
+    const lblScaleY = document.getElementById('lbl-scale-y');
+
+    if (rangeScaleX) {
+      rangeScaleX.addEventListener('input', (e) => {
+        state.scaleX = parseInt(e.target.value) || 100;
+        if (lblScaleX) lblScaleX.innerText = `${state.scaleX}%`;
+        if (chkLockRatio && chkLockRatio.checked) {
+          state.scaleY = state.scaleX;
+          if (rangeScaleY) rangeScaleY.value = state.scaleY;
+          if (lblScaleY) lblScaleY.innerText = `${state.scaleY}%`;
+        }
+        updateLiveComposite();
+      });
+    }
+
+    if (rangeScaleY) {
+      rangeScaleY.addEventListener('input', (e) => {
+        state.scaleY = parseInt(e.target.value) || 100;
+        if (lblScaleY) lblScaleY.innerText = `${state.scaleY}%`;
+        if (chkLockRatio && chkLockRatio.checked) {
+          state.scaleX = state.scaleY;
+          if (rangeScaleX) rangeScaleX.value = state.scaleX;
+          if (lblScaleX) lblScaleX.innerText = `${state.scaleX}%`;
+        }
+        updateLiveComposite();
+      });
+    }
+
+    if (chkLockRatio) {
+      chkLockRatio.addEventListener('change', () => {
+        const lblTitle = document.getElementById('lbl-scale-x-name');
+        if (chkLockRatio.checked) {
+          state.scaleY = state.scaleX;
+          if (rangeScaleY) rangeScaleY.value = state.scaleY;
+          if (lblScaleY) lblScaleY.innerText = `${state.scaleY}%`;
+          if (lblTitle) lblTitle.innerText = '宽度拉伸 / 整体缩放:';
+        } else {
+          if (lblTitle) lblTitle.innerText = '宽度自由拉伸:';
+        }
+        updateLiveComposite();
+      });
+    }
+
     // 特效位置偏移滑块
     document.getElementById('range-offset-x').addEventListener('input', (e) => {
       state.offsetX = parseInt(e.target.value) || 0;
@@ -1306,10 +1389,16 @@
     document.getElementById('btn-reset-offset').addEventListener('click', () => {
       state.offsetX = 0;
       state.offsetY = 0;
+      state.scaleX = 100;
+      state.scaleY = 100;
       document.getElementById('range-offset-x').value = 0;
       document.getElementById('range-offset-y').value = 0;
+      if (rangeScaleX) rangeScaleX.value = 100;
+      if (rangeScaleY) rangeScaleY.value = 100;
       document.getElementById('lbl-offset-x').innerText = '0 px';
       document.getElementById('lbl-offset-y').innerText = '0 px';
+      if (lblScaleX) lblScaleX.innerText = '100%';
+      if (lblScaleY) lblScaleY.innerText = '100%';
       updateLiveComposite();
     });
 
@@ -1955,6 +2044,8 @@
           blend_mode: state.blendMode,
           offset_x: state.offsetX,
           offset_y: state.offsetY,
+          scale_x: (state.scaleX !== undefined ? state.scaleX : 100) / 100,
+          scale_y: (state.scaleY !== undefined ? state.scaleY : 100) / 100,
           layer_order: state.layerOrder
         })
       });
@@ -2121,7 +2212,13 @@
         } else {
           ctx.globalCompositeOperation = 'source-over';
         }
-        ctx.drawImage(state.compositeLayer2Img, state.offsetX, state.offsetY, size, size);
+        const scaleX = (state.scaleX !== undefined ? state.scaleX : 100) / 100;
+        const scaleY = (state.scaleY !== undefined ? state.scaleY : 100) / 100;
+        const w = Math.round(size * scaleX);
+        const h = Math.round(size * scaleY);
+        const x = Math.round((size - w) / 2 + state.offsetX);
+        const y = Math.round((size - h) / 2 + state.offsetY);
+        ctx.drawImage(state.compositeLayer2Img, x, y, w, h);
       }
 
       if (isSolidTop) {

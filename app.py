@@ -86,6 +86,8 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
             blend_mode = str(data.get("blend_mode", "additive"))
             offset_x = int(data.get("offset_x", 0))
             offset_y = int(data.get("offset_y", 0))
+            scale_x = float(data.get("scale_x", 1.0))
+            scale_y = float(data.get("scale_y", 1.0))
             layer_order = str(data.get("layer_order", "vfx_on_top"))
 
             def b64_to_pil(b64_str):
@@ -136,6 +138,8 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
                     blend_mode=blend_mode,
                     offset_x=offset_x,
                     offset_y=offset_y,
+                    scale_x=scale_x,
+                    scale_y=scale_y,
                     layer_order=layer_order
                 )
 
