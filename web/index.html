@@ -774,12 +774,11 @@
         <div class="form-group">
           <div class="form-label">
             <span>处理模式</span>
-            <span class="value-badge" id="lbl-mode">📦 实体道具</span>
           </div>
           <div class="capsule-group" style="grid-template-columns: repeat(3, 1fr);">
-            <button class="capsule-btn active" data-mode="solid">📦 实体道具</button>
-            <button class="capsule-btn" data-mode="vfx">✨ 发光特效</button>
-            <button class="capsule-btn" data-mode="composite">⚔️ 双层合体</button>
+            <button class="capsule-btn active" data-mode="solid">道具</button>
+            <button class="capsule-btn" data-mode="vfx">特效</button>
+            <button class="capsule-btn" data-mode="composite">双图层</button>
           </div>
         </div>
 
@@ -816,7 +815,6 @@
           <div class="form-group" style="margin-bottom: 14px;">
             <div class="form-label">
               <span>抠图净化模式</span>
-              <span class="value-badge" id="lbl-mask-mode">Alpha 容差分离</span>
             </div>
             <div class="capsule-group" style="grid-template-columns: 1fr 1fr; gap: 8px;">
               <button class="capsule-btn active" data-mask="tolerance" id="btn-mask-tolerance">✨ Alpha 容差分离</button>
@@ -837,11 +835,11 @@
             <div class="switch-subtext" style="margin-top: 4px;">容差分离默认 100；连通增强默认 120 (可按需微调)</div>
           </div>
 
-          <!-- 1px 正交实体黑描边 -->
+          <!-- 1px 描边 -->
           <div class="switch-row">
             <div>
-              <div class="switch-label">1px 正交闭合描边</div>
-              <div class="switch-subtext">纯正独立游戏复古像素硬轮廓</div>
+              <div class="switch-label">1px 描边</div>
+              <div class="switch-subtext">独立游戏复古像素硬轮廓</div>
             </div>
             <label class="switch">
               <input type="checkbox" id="chk-outline" checked>
@@ -983,9 +981,13 @@
             <span style="font-size:12px; color:var(--text-muted); font-weight:normal;" id="item-title-meta"></span>
           </div>
           <div class="zoom-toolbar">
-            <span style="font-size:11px; color:var(--text-muted); margin-right:4px;">比例对齐:</span>
-            <button class="zoom-btn active" data-zoom="fit">等大对比 (Fit)</button>
-            <button class="zoom-btn" data-zoom="1">1x 原生</button>
+            <span style="font-size:11px; color:var(--text-muted); margin-right:4px;">缩放与拉伸:</span>
+            <button class="zoom-btn active" data-zoom="fit" id="btn-zoom-fit">适应 (Fit)</button>
+            <button class="zoom-btn" data-zoom="stretch" id="btn-zoom-stretch" title="铺满拉伸画布">⤢ 拉伸铺满</button>
+            <button class="zoom-btn" id="btn-zoom-out" title="缩小">- 缩小</button>
+            <span id="lbl-zoom-val" style="font-size:11px; color:var(--accent-cyan); font-family:monospace; min-width:42px; text-align:center;">100%</span>
+            <button class="zoom-btn" id="btn-zoom-in" title="放大">+ 放大</button>
+            <button class="zoom-btn" data-zoom="1">1x</button>
             <button class="zoom-btn" data-zoom="2">2x</button>
             <button class="zoom-btn" data-zoom="4">4x</button>
             <button class="zoom-btn" data-zoom="8">8x</button>
@@ -995,8 +997,8 @@
 
         <!-- 像素对比小提示 -->
         <div style="font-size: 11px; color: var(--text-muted); background: #0c121e; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
-          <span>💡 <strong>对齐解析</strong>：左侧为 AI 原图高分辨率渲染（带连续羽化光晕）；右侧为游戏专用纯正 1:1 像素块。建议开启【等大对比】清晰检视像素点与 1px 闭合描边。</span>
-          <span style="color: var(--accent-gold);" id="scale-factor-badge">当前缩放: 等大 1:1 对比</span>
+          <span>💡 <strong>视口操控</strong>：支持鼠标滚轮自由放大缩小、点击【⤢ 拉伸铺满】充满视口，或选择 1x~8x 倍率检视。</span>
+          <span style="color: var(--accent-gold);" id="scale-factor-badge">当前缩放: 等大 1:1 对比 (100%)</span>
         </div>
 
         <div class="views-container">
@@ -1235,8 +1237,9 @@
         btn.classList.add('active');
         state.mode = btn.dataset.mode;
 
-        const modeNames = { solid: '📦 实体道具', vfx: '✨ 发光特效', composite: '⚔️ 双层合体' };
-        document.getElementById('lbl-mode').innerText = modeNames[state.mode];
+        const modeNames = { solid: '道具', vfx: '特效', composite: '双图层' };
+        const lblM = document.getElementById('lbl-mode');
+        if (lblM) lblM.innerText = modeNames[state.mode];
 
         const isSolid = state.mode === 'solid';
         const isVfx = state.mode === 'vfx';
@@ -1331,15 +1334,16 @@
         document.querySelectorAll('.capsule-btn[data-mask]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.maskMode = btn.dataset.mask;
+        const lblMM = document.getElementById('lbl-mask-mode');
         if (state.maskMode === 'single') {
           state.postProcessMask = true;
           state.alphaThreshold = 120;
-          document.getElementById('lbl-mask-mode').innerText = '连通增强 (alpha≥120)';
+          if (lblMM) lblMM.innerText = '连通增强 (alpha≥120)';
           document.getElementById('mask-mode-desc').innerText = '🎯 连通增强：post_process_mask=True（强制寻找最大单一连通块并形态学腐蚀，alpha≥120），适合单体武器/道具。';
         } else {
           state.postProcessMask = false;
           state.alphaThreshold = 100;
-          document.getElementById('lbl-mask-mode').innerText = 'Alpha 容差分离';
+          if (lblMM) lblMM.innerText = 'Alpha 容差分离';
           document.getElementById('mask-mode-desc').innerText = '💡 容差模式：保留半透明光晕、多角色序列帧与断连粒子（post_process_mask=False），避免断裂误切。';
         }
         document.getElementById('range-alpha-thresh').value = state.alphaThreshold;
@@ -1544,35 +1548,107 @@
 
     document.querySelectorAll('.zoom-btn[data-zoom]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.zoom-btn[data-zoom]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.zoom = btn.dataset.zoom;
         applyZoom();
       });
     });
 
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+    if (btnZoomIn) {
+      btnZoomIn.addEventListener('click', () => {
+        document.querySelectorAll('.zoom-btn[data-zoom]').forEach(b => b.classList.remove('active'));
+        state.zoom = 'custom';
+        state.zoomScale = Math.min(16.0, (state.zoomScale || 1.0) * 1.25);
+        applyZoom();
+      });
+    }
+    if (btnZoomOut) {
+      btnZoomOut.addEventListener('click', () => {
+        document.querySelectorAll('.zoom-btn[data-zoom]').forEach(b => b.classList.remove('active'));
+        state.zoom = 'custom';
+        state.zoomScale = Math.max(0.15, (state.zoomScale || 1.0) / 1.25);
+        applyZoom();
+      });
+    }
+
+    // 鼠标滚轮自由放大缩小
+    function handleWheelZoom(e) {
+      e.preventDefault();
+      document.querySelectorAll('.zoom-btn[data-zoom]').forEach(b => b.classList.remove('active'));
+      state.zoom = 'custom';
+      const factor = e.deltaY < 0 ? 1.15 : 0.87;
+      state.zoomScale = Math.min(16.0, Math.max(0.15, (state.zoomScale || 1.0) * factor));
+      applyZoom();
+    }
+    const viewPixel = document.getElementById('view-body-pixel');
+    const viewOrig = document.getElementById('view-body-original');
+    if (viewPixel) viewPixel.addEventListener('wheel', handleWheelZoom, { passive: false });
+    if (viewOrig) viewOrig.addEventListener('wheel', handleWheelZoom, { passive: false });
+
     function applyZoom() {
       const standardSize = 340; // 视口对齐基准尺寸
-      if (state.zoom === 'fit') {
+      const lblZoom = document.getElementById('lbl-zoom-val');
+
+      if (state.zoom === 'stretch') {
+        imgOriginal.style.width = '100%';
+        imgOriginal.style.height = '100%';
+        imgOriginal.style.objectFit = 'fill';
+        imgPixel.style.width = '100%';
+        imgPixel.style.height = '100%';
+        imgPixel.style.objectFit = 'fill';
+        if (pixelFrame) {
+          pixelFrame.style.width = '100%';
+          pixelFrame.style.height = '100%';
+        }
+        if (lblZoom) lblZoom.innerText = '拉伸';
+        if (scaleFactorBadge) {
+          scaleFactorBadge.innerText = '当前模式: ⤢ 自由拉伸铺满 (Stretch Fill)';
+        }
+      } else if (state.zoom === 'fit') {
+        state.zoomScale = 1.0;
         imgOriginal.style.width = `${standardSize}px`;
         imgOriginal.style.height = `${standardSize}px`;
+        imgOriginal.style.objectFit = 'contain';
         imgPixel.style.width = `${standardSize}px`;
         imgPixel.style.height = `${standardSize}px`;
+        imgPixel.style.objectFit = 'contain';
+        if (pixelFrame) {
+          pixelFrame.style.width = `${standardSize}px`;
+          pixelFrame.style.height = `${standardSize}px`;
+        }
+        if (lblZoom) lblZoom.innerText = '100%';
         if (scaleFactorBadge) {
-          scaleFactorBadge.innerText = `当前模式: 等大 1:1 对比 (${state.targetSize}px 铺满检视)`;
+          scaleFactorBadge.innerText = `当前模式: 适应居中 (${state.targetSize}px 铺满检视)`;
         }
       } else {
-        const factor = parseInt(state.zoom) || 1;
-        const pixelRenderSize = state.targetSize * factor;
-        imgOriginal.style.width = `${standardSize}px`;
-        imgOriginal.style.height = `${standardSize}px`;
-        imgPixel.style.width = `${pixelRenderSize}px`;
-        imgPixel.style.height = `${pixelRenderSize}px`;
+        imgOriginal.style.objectFit = 'contain';
+        imgPixel.style.objectFit = 'contain';
+        let renderSize;
+        if (state.zoom === 'custom') {
+          renderSize = Math.round(standardSize * (state.zoomScale || 1.0));
+        } else {
+          const factor = parseInt(state.zoom) || 1;
+          renderSize = state.targetSize * factor;
+          state.zoomScale = renderSize / standardSize;
+        }
+        imgOriginal.style.width = `${renderSize}px`;
+        imgOriginal.style.height = `${renderSize}px`;
+        imgPixel.style.width = `${renderSize}px`;
+        imgPixel.style.height = `${renderSize}px`;
+        if (pixelFrame) {
+          pixelFrame.style.width = `${renderSize}px`;
+          pixelFrame.style.height = `${renderSize}px`;
+        }
+        const pct = Math.round((state.zoomScale || 1.0) * 100);
+        if (lblZoom) lblZoom.innerText = `${pct}%`;
         if (scaleFactorBadge) {
-          scaleFactorBadge.innerText = `当前模式: ${factor}x 原生尺寸 (${pixelRenderSize} × ${pixelRenderSize} px)`;
+          scaleFactorBadge.innerText = `当前缩放: ${pct}% (${renderSize} × ${renderSize} px)`;
         }
       }
-      setTimeout(updateGridSize, 160);
+      setTimeout(updateGridSize, 120);
     }
 
     function updateGridSize() {
