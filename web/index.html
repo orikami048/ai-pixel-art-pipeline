@@ -597,6 +597,53 @@
       image-rendering: pixelated;
     }
 
+    /* 放大预览弹窗 */
+    .modal-backdrop {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(4, 7, 12, 0.88);
+      backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal-content {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      width: 92vw;
+      max-width: 1100px;
+      height: 85vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 14px 20px;
+      background: #111622;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .modal-body {
+      flex: 1;
+      overflow: auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-image: 
+        linear-gradient(45deg, #12161f 25%, transparent 25%), 
+        linear-gradient(-45deg, #12161f 25%, transparent 25%), 
+        linear-gradient(45deg, transparent 75%, #12161f 75%), 
+        linear-gradient(-45deg, transparent 75%, #12161f 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+    }
+
     /* 移动端响应式 */
     @media (max-width: 900px) {
       main {
@@ -701,6 +748,13 @@
           <input type="range" id="range-noise" min="0" max="50" step="2" value="18">
         </div>
 
+        <!-- 开始生成操作按钮 -->
+        <div style="margin-top: 20px;">
+          <button class="btn btn-primary" id="btn-run-process" style="width: 100%; justify-content: center; padding: 13px; font-size: 14px; font-weight: 700; box-shadow: 0 0 16px rgba(0, 240, 255, 0.45);">
+            ⚡ 开始生成 / 应用新参数
+          </button>
+        </div>
+
       </div>
 
       <!-- 快捷示例 -->
@@ -771,8 +825,11 @@
           <!-- 右侧：真像素成品 -->
           <div class="view-card">
             <div class="view-title">
-              <span style="color:var(--accent-cyan);">真像素成品 (True-Pixel - 游戏硬件标准)</span>
-              <span id="pixel-res-meta" style="color:var(--accent-gold);">-</span>
+              <span style="color:var(--accent-cyan);">真像素成品 (True-Pixel)</span>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span id="pixel-res-meta" style="color:var(--accent-gold);">-</span>
+                <button class="capsule-btn" id="btn-open-modal" style="padding: 2px 10px; font-size: 11px; color: var(--accent-cyan); border-color: var(--accent-cyan);">🔍 放大预览</button>
+              </div>
             </div>
             <div class="view-body" id="view-body-pixel">
               <div class="pixel-frame" id="pixel-frame">
@@ -837,7 +894,6 @@
         state.targetSize = parseInt(btn.dataset.size);
         document.getElementById('lbl-resolution').innerText = `${state.targetSize} × ${state.targetSize}`;
         applyZoom();
-        if (state.currentRawBase64) reprocessCurrent();
       });
     });
 
@@ -845,33 +901,37 @@
       state.colorCount = parseInt(e.target.value);
       document.getElementById('lbl-colors').innerText = `${state.colorCount} 色`;
     });
-    document.getElementById('range-colors').addEventListener('change', () => {
-      if (state.currentRawBase64) reprocessCurrent();
-    });
 
     document.getElementById('chk-rembg').addEventListener('change', (e) => {
       state.removeBg = e.target.checked;
-      if (state.currentRawBase64) reprocessCurrent();
     });
 
     document.getElementById('chk-outline').addEventListener('change', (e) => {
       state.applyOutline = e.target.checked;
       document.getElementById('outline-color-group').style.display = state.applyOutline ? 'block' : 'none';
-      if (state.currentRawBase64) reprocessCurrent();
     });
 
     document.getElementById('picker-outline-color').addEventListener('change', (e) => {
       state.outlineColor = e.target.value;
       document.getElementById('lbl-outline-color').innerText = state.outlineColor;
-      if (state.currentRawBase64) reprocessCurrent();
     });
 
     document.getElementById('range-noise').addEventListener('input', (e) => {
       state.noiseArea = parseInt(e.target.value);
       document.getElementById('lbl-noise').innerText = `${state.noiseArea} px`;
     });
-    document.getElementById('range-noise').addEventListener('change', () => {
-      if (state.currentRawBase64) reprocessCurrent();
+
+    // 点击【开始生成】按钮执行处理
+    document.getElementById('btn-run-process').addEventListener('click', () => {
+      if (!state.currentRawBase64 && state.batchItems.length === 0) {
+        alert('请先上传或拖拽 AI 图像，或者点击下方示例！');
+        return;
+      }
+      if (state.batchItems.length > 1) {
+        processBatchQueue();
+      } else {
+        reprocessCurrent();
+      }
     });
 
     // 缩放切换与网格线
@@ -974,7 +1034,12 @@
         state.batchItems = [];
         batchTray.style.display = 'none';
         btnDownloadBatchZip.style.display = 'none';
-        processSingle(file.name, base64);
+        state.currentRawBase64 = base64;
+        state.currentNativeBase64 = null;
+        imgOriginal.src = base64;
+        imgPixel.src = '';
+        document.getElementById('item-title-meta').innerText = `• ${file.name} (已就绪，调参后点击【开始生成】)`;
+        applyZoom();
       } else {
         // 多图批量处理
         state.batchItems = [];
@@ -990,7 +1055,8 @@
           });
         }
         renderBatchTray();
-        processBatchQueue();
+        selectBatchItem(0);
+        document.getElementById('item-title-meta').innerText = `• 共 ${files.length} 张图片已导入 (调参后点击【开始生成】)`;
       }
     }
 
@@ -1174,11 +1240,93 @@
         const resp = await fetch(url);
         const blob = await resp.blob();
         const base64 = await fileToBase64(blob);
-        processSingle(name, base64);
+        state.batchItems = [];
+        batchTray.style.display = 'none';
+        btnDownloadBatchZip.style.display = 'none';
+        state.currentRawBase64 = base64;
+        state.currentNativeBase64 = null;
+        imgOriginal.src = base64;
+        imgPixel.src = '';
+        document.getElementById('item-title-meta').innerText = `• ${name} (已就绪，调参后点击【开始生成】)`;
+        applyZoom();
       } catch (e) {
         console.error('Demo load failed', e);
       }
     }
+
+    // 放大预览弹窗逻辑
+    const previewModal = document.getElementById('preview-modal');
+    const modalImg = document.getElementById('modal-img');
+    const modalInfoBadge = document.getElementById('modal-info-badge');
+    const lblModalZoom = document.getElementById('lbl-modal-zoom');
+    let modalZoom = 4;
+
+    function openModal() {
+      if (!state.currentNativeBase64 && !imgPixel.src) {
+        alert('当前尚未生成像素图片，请先上传并点击【开始生成】！');
+        return;
+      }
+      modalImg.src = state.currentNativeBase64 || imgPixel.src;
+      modalInfoBadge.innerText = `${state.targetSize} × ${state.targetSize} 像素`;
+      modalZoom = Math.max(1, Math.min(12, Math.floor(480 / state.targetSize))) || 4;
+      updateModalZoom();
+      previewModal.style.display = 'flex';
+    }
+
+    function closeModal() {
+      previewModal.style.display = 'none';
+    }
+
+    function updateModalZoom() {
+      const renderSize = state.targetSize * modalZoom;
+      modalImg.style.width = `${renderSize}px`;
+      modalImg.style.height = `${renderSize}px`;
+      lblModalZoom.innerText = `${modalZoom * 100}%`;
+    }
+
+    document.getElementById('btn-open-modal').addEventListener('click', openModal);
+    imgPixel.addEventListener('click', openModal);
+    imgPixel.style.cursor = 'zoom-in';
+
+    document.getElementById('btn-close-modal').addEventListener('click', closeModal);
+    previewModal.addEventListener('click', (e) => {
+      if (e.target === previewModal) closeModal();
+    });
+
+    document.getElementById('btn-modal-zoom-in').addEventListener('click', () => {
+      if (modalZoom < 32) {
+        modalZoom = modalZoom >= 4 ? modalZoom + 2 : modalZoom + 1;
+        updateModalZoom();
+      }
+    });
+
+    document.getElementById('btn-modal-zoom-out').addEventListener('click', () => {
+      if (modalZoom > 1) {
+        modalZoom = modalZoom > 4 ? modalZoom - 2 : modalZoom - 1;
+        updateModalZoom();
+      }
+    });
   </script>
+
+  <!-- 放大预览弹窗 (Lightbox Modal) -->
+  <div class="modal-backdrop" id="preview-modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div style="font-weight:700; font-size:15px; display:flex; align-items:center; gap:10px;">
+          <span>🔍 高清真像素巨幅检视</span>
+          <span style="font-size:12px; color:var(--accent-gold);" id="modal-info-badge"></span>
+        </div>
+        <div style="display:flex; align-items:center; gap:8px;">
+          <button class="capsule-btn" id="btn-modal-zoom-out" style="padding:4px 10px;">- 缩小</button>
+          <span id="lbl-modal-zoom" style="font-size:12px; font-family:monospace; color:var(--accent-cyan); min-width:45px; text-align:center;">400%</span>
+          <button class="capsule-btn" id="btn-modal-zoom-in" style="padding:4px 10px;">+ 放大</button>
+          <button class="btn btn-secondary" id="btn-close-modal" style="padding:4px 12px; font-size:12px; margin-left:8px;">✕ 关闭</button>
+        </div>
+      </div>
+      <div class="modal-body" id="modal-body">
+        <img id="modal-img" class="pixel-target-img" alt="高清检视">
+      </div>
+    </div>
+  </div>
 </body>
 </html>
