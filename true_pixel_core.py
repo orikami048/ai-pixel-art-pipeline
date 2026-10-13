@@ -109,7 +109,9 @@ def process_image(
 
     # 3. Fit into target square canvas preserving aspect ratio
     cw, ch = cropped.size
-    fit_size = max(1, target_size - (8 if apply_outline else 2))
+    # Reserve 2px margin (1px each side) only if outline is needed, maximizing sprite detail
+    margin = 2 if apply_outline else 0
+    fit_size = max(1, target_size - margin)
     scale = fit_size / max(cw, ch)
     nw = max(1, int(round(cw * scale)))
     nh = max(1, int(round(ch * scale)))
@@ -120,9 +122,14 @@ def process_image(
     # 4. Color Palette Quantization
     if has_alpha:
         r, g, b, a = resized.split()
+        # Strictly binarize alpha to eliminate fuzzy Lanczos edges for authentic solid pixel art
+        a_arr = np.array(a)
+        a_clean_mask = np.where(a_arr >= 128, 255, 0).astype(np.uint8)
+        a_clean = Image.fromarray(a_clean_mask, mode="L")
+
         rgb = Image.merge("RGB", (r, g, b))
         q_rgb = rgb.quantize(colors=color_count, method=Image.Quantize.MEDIANCUT).convert("RGB")
-        quantized = Image.merge("RGBA", (*q_rgb.split(), a))
+        quantized = Image.merge("RGBA", (*q_rgb.split(), a_clean))
     else:
         quantized = resized.convert("RGB").quantize(colors=color_count, method=Image.Quantize.MEDIANCUT).convert("RGBA")
 

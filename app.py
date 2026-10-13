@@ -15,6 +15,7 @@ import os
 import sys
 import zipfile
 import webbrowser
+import numpy as np
 from PIL import Image
 from true_pixel_core import process_image
 
@@ -107,7 +108,8 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
             b64_4x = "data:image/png;base64," + base64.b64encode(buf_4x.getvalue()).decode("utf-8")
 
             # Count actual unique colors
-            unique_colors = len(set(native_img.getdata()))
+            arr_np = np.array(native_img)
+            unique_colors = len(np.unique(arr_np.reshape(-1, 4), axis=0))
 
             response_data = {
                 "success": True,
@@ -169,17 +171,26 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(500, f"Zip error: {str(e)}")
 
 
+class ThreadingHTTPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+
 def run_server(port=PORT):
-    # Allow port reuse
-    socketserver.TCPServer.allow_reuse_address = True
     while port < 7900:
         try:
-            server = socketserver.TCPServer(("0.0.0.0", port), TruePixelHandler)
+            server = ThreadingHTTPServer(("0.0.0.0", port), TruePixelHandler)
             print("=" * 60)
             print(f" 🎨 TruePixel Studio Web GUI is LIVE!")
             print(f" -> Access URL: http://localhost:{port}/")
             print(f" -> Localhost:  http://127.0.0.1:{port}/")
             print("=" * 60)
+            # Auto-open browser in 0.6 seconds
+            try:
+                import threading
+                threading.Timer(0.6, lambda p=port: webbrowser.open(f"http://localhost:{p}/")).start()
+            except Exception:
+                pass
             break
         except OSError:
             port += 1

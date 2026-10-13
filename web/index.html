@@ -428,20 +428,41 @@
       background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
     }
 
+    .pixel-frame {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .pixel-grid-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none;
+      display: none;
+      opacity: 0.45;
+      background-size: 5px 5px;
+      background-image: 
+        linear-gradient(to right, rgba(0, 240, 255, 0.45) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 240, 255, 0.45) 1px, transparent 1px);
+    }
+
     .pixel-target-img {
       image-rendering: pixelated;
       image-rendering: crisp-edges;
-      transition: transform 0.15s ease-out;
-      max-width: 90%;
-      max-height: 90%;
       object-fit: contain;
+      display: block;
+      width: 320px;
+      height: 320px;
+      transition: width 0.15s ease-out, height 0.15s ease-out;
     }
 
     .original-target-img {
-      max-width: 90%;
-      max-height: 90%;
       object-fit: contain;
-      transition: transform 0.15s ease-out;
+      display: block;
+      width: 320px;
+      height: 320px;
+      transition: width 0.15s ease-out, height 0.15s ease-out;
     }
 
     /* 底部操作与下载工具栏 */
@@ -716,22 +737,30 @@
             <span style="font-size:12px; color:var(--text-muted); font-weight:normal;" id="item-title-meta"></span>
           </div>
           <div class="zoom-toolbar">
-            <span style="font-size:11px; color:var(--text-muted); margin-right:4px;">放大预览:</span>
-            <button class="zoom-btn" data-zoom="1">1x</button>
+            <span style="font-size:11px; color:var(--text-muted); margin-right:4px;">比例对齐:</span>
+            <button class="zoom-btn active" data-zoom="fit">等大对比 (Fit)</button>
+            <button class="zoom-btn" data-zoom="1">1x 原生</button>
             <button class="zoom-btn" data-zoom="2">2x</button>
-            <button class="zoom-btn active" data-zoom="4">4x</button>
+            <button class="zoom-btn" data-zoom="4">4x</button>
             <button class="zoom-btn" data-zoom="8">8x</button>
+            <button class="zoom-btn" id="btn-toggle-grid" style="margin-left:4px;" title="开启/关闭像素网格对齐线">▦ 像素网格</button>
           </div>
+        </div>
+
+        <!-- 像素对比小提示 -->
+        <div style="font-size: 11px; color: var(--text-muted); background: #0c121e; border: 1px solid var(--border-color); padding: 8px 12px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between;">
+          <span>💡 <strong>对齐解析</strong>：左侧为 AI 原图高分辨率渲染（带连续羽化光晕）；右侧为游戏专用纯正 1:1 像素块。建议开启【等大对比】清晰检视像素点与 1px 闭合描边。</span>
+          <span style="color: var(--accent-gold);" id="scale-factor-badge">当前缩放: 等大 1:1 对比</span>
         </div>
 
         <div class="views-container">
           <!-- 左侧：AI 原始输入 -->
           <div class="view-card">
             <div class="view-title">
-              <span>原始输入 (AI Raw)</span>
+              <span>原始输入 (AI Raw - 1024 高分羽化)</span>
               <span id="raw-res-meta">-</span>
             </div>
-            <div class="view-body">
+            <div class="view-body" id="view-body-original">
               <img id="img-original" class="original-target-img" alt="原始图像">
             </div>
           </div>
@@ -739,11 +768,14 @@
           <!-- 右侧：真像素成品 -->
           <div class="view-card">
             <div class="view-title">
-              <span style="color:var(--accent-cyan);">真像素成品 (True-Pixel)</span>
+              <span style="color:var(--accent-cyan);">真像素成品 (True-Pixel - 游戏硬件标准)</span>
               <span id="pixel-res-meta" style="color:var(--accent-gold);">-</span>
             </div>
-            <div class="view-body">
-              <img id="img-pixel" class="pixel-target-img" alt="真像素成品">
+            <div class="view-body" id="view-body-pixel">
+              <div class="pixel-frame" id="pixel-frame">
+                <img id="img-pixel" class="pixel-target-img" alt="真像素成品">
+                <div class="pixel-grid-overlay" id="pixel-grid-overlay"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -774,7 +806,7 @@
       applyOutline: true,
       outlineColor: '#12141a',
       noiseArea: 18,
-      zoom: 4,
+      zoom: 'fit',
       currentRawBase64: null,
       currentNativeBase64: null,
       currentPreview4xBase64: null,
@@ -801,6 +833,7 @@
         btn.classList.add('active');
         state.targetSize = parseInt(btn.dataset.size);
         document.getElementById('lbl-resolution').innerText = `${state.targetSize} × ${state.targetSize}`;
+        applyZoom();
         if (state.currentRawBase64) reprocessCurrent();
       });
     });
@@ -838,19 +871,59 @@
       if (state.currentRawBase64) reprocessCurrent();
     });
 
-    // 缩放切换
-    document.querySelectorAll('.zoom-btn').forEach(btn => {
+    // 缩放切换与网格线
+    let isGridVisible = false;
+    const btnToggleGrid = document.getElementById('btn-toggle-grid');
+    const pixelGridOverlay = document.getElementById('pixel-grid-overlay');
+    const scaleFactorBadge = document.getElementById('scale-factor-badge');
+
+    if (btnToggleGrid) {
+      btnToggleGrid.addEventListener('click', () => {
+        isGridVisible = !isGridVisible;
+        btnToggleGrid.classList.toggle('active', isGridVisible);
+        pixelGridOverlay.style.display = isGridVisible ? 'block' : 'none';
+        updateGridSize();
+      });
+    }
+
+    document.querySelectorAll('.zoom-btn[data-zoom]').forEach(btn => {
       btn.addEventListener('click', () => {
-        document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.zoom-btn[data-zoom]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
-        state.zoom = parseInt(btn.dataset.zoom);
+        state.zoom = btn.dataset.zoom;
         applyZoom();
       });
     });
 
     function applyZoom() {
-      imgPixel.style.transform = `scale(${state.zoom / 4})`;
-      imgOriginal.style.transform = `scale(${Math.min(1.5, state.zoom / 4)})`;
+      const standardSize = 340; // 视口对齐基准尺寸
+      if (state.zoom === 'fit') {
+        imgOriginal.style.width = `${standardSize}px`;
+        imgOriginal.style.height = `${standardSize}px`;
+        imgPixel.style.width = `${standardSize}px`;
+        imgPixel.style.height = `${standardSize}px`;
+        if (scaleFactorBadge) {
+          scaleFactorBadge.innerText = `当前模式: 等大 1:1 对比 (${state.targetSize}px 铺满检视)`;
+        }
+      } else {
+        const factor = parseInt(state.zoom) || 1;
+        const pixelRenderSize = state.targetSize * factor;
+        imgOriginal.style.width = `${standardSize}px`;
+        imgOriginal.style.height = `${standardSize}px`;
+        imgPixel.style.width = `${pixelRenderSize}px`;
+        imgPixel.style.height = `${pixelRenderSize}px`;
+        if (scaleFactorBadge) {
+          scaleFactorBadge.innerText = `当前模式: ${factor}x 原生尺寸 (${pixelRenderSize} × ${pixelRenderSize} px)`;
+        }
+      }
+      setTimeout(updateGridSize, 160);
+    }
+
+    function updateGridSize() {
+      if (!pixelGridOverlay || !isGridVisible) return;
+      const curWidth = imgPixel.clientWidth || 340;
+      const unitSize = curWidth / (state.targetSize || 96);
+      pixelGridOverlay.style.backgroundSize = `${unitSize}px ${unitSize}px`;
     }
 
     // 拖拽文件事件
@@ -952,6 +1025,7 @@
         imgOriginal.src = item.rawBase64;
         imgPixel.src = item.nativeBase64 || item.rawBase64;
         document.getElementById('item-title-meta').innerText = `• ${item.name}`;
+        applyZoom();
       }
     }
 
@@ -993,6 +1067,7 @@
         state.currentNativeBase64 = res.native_base64;
         state.currentPreview4xBase64 = res.preview4x_base64;
         imgPixel.src = res.native_base64;
+        applyZoom();
 
         document.getElementById('raw-res-meta').innerText = `${res.raw_width} × ${res.raw_height}`;
         document.getElementById('pixel-res-meta').innerText = `${res.target_size} × ${res.target_size} Px`;
