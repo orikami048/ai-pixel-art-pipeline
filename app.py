@@ -88,6 +88,8 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
             offset_y = int(data.get("offset_y", 0))
             scale_x = float(data.get("scale_x", 1.0))
             scale_y = float(data.get("scale_y", 1.0))
+            rotation = float(data.get("rotation", 0.0))
+            canvas_padding = float(data.get("canvas_padding", 0.0))
             layer_order = str(data.get("layer_order", "vfx_on_top"))
 
             def b64_to_pil(b64_str):
@@ -140,11 +142,14 @@ class TruePixelHandler(http.server.SimpleHTTPRequestHandler):
                     offset_y=offset_y,
                     scale_x=scale_x,
                     scale_y=scale_y,
+                    rotation=rotation,
+                    canvas_padding=canvas_padding,
                     layer_order=layer_order
                 )
 
-                preview_scale = 4 if target_size <= 256 else (2 if target_size <= 512 else 1)
-                preview_w = target_size * preview_scale
+                actual_size = comp_native.width
+                preview_scale = 4 if actual_size <= 256 else (2 if actual_size <= 512 else 1)
+                preview_w = actual_size * preview_scale
                 preview_4x = comp_native.resize((preview_w, preview_w), Image.Resampling.NEAREST)
 
                 native_img = comp_native

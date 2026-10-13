@@ -295,25 +295,44 @@ def composite_layers(
     offset_y: int = 0,
     scale_x: float = 1.0,
     scale_y: float = 1.0,
+    rotation: float = 0.0,
+    canvas_padding: float = 0.0,
     layer_order: str = "vfx_on_top"
 ) -> Image.Image:
     """
     Composite Layer 1 (Solid Weapon/Item) and Layer 2 (Glowing Aura/VFX) with game-engine grade blending.
     Supports movable VFX offset (offset_x, offset_y), free scaling & stretching (scale_x, scale_y),
+    360° rotation (rotation in degrees), canvas padding expansion (canvas_padding),
     and layer stacking order (vfx_on_top vs solid_on_top).
     """
     tw, th = solid_img.size
+
+    # Expand canvas if padding requested to prevent large/diagonal rotated VFX from clipping
+    if canvas_padding > 0.0:
+        pad_px = int(round(tw * canvas_padding / 2))
+        if pad_px > 0:
+            new_tw = tw + pad_px * 2
+            new_th = th + pad_px * 2
+            exp_solid = Image.new("RGBA", (new_tw, new_th), (0, 0, 0, 0))
+            exp_solid.paste(solid_img, (pad_px, pad_px), solid_img)
+            solid_img = exp_solid
+            tw, th = new_tw, new_th
+
     if vfx_img.size != (tw, th):
         vfx_img = vfx_img.resize((tw, th), Image.Resampling.NEAREST)
 
-    # Apply scaling, stretching and offset to VFX layer
-    if scale_x != 1.0 or scale_y != 1.0:
+    # Apply scaling, stretching, rotation, and offset to VFX layer
+    if scale_x != 1.0 or scale_y != 1.0 or rotation != 0.0:
         new_w = max(1, int(round(tw * scale_x)))
         new_h = max(1, int(round(th * scale_y)))
         vfx_scaled = vfx_img.resize((new_w, new_h), Image.Resampling.BILINEAR)
+        if rotation != 0.0:
+            # Rotate clockwise matching canvas convention
+            vfx_scaled = vfx_scaled.rotate(-rotation, resample=Image.Resampling.BILINEAR, expand=True)
+        rw, rh = vfx_scaled.size
+        paste_x = (tw - rw) // 2 + offset_x
+        paste_y = (th - rh) // 2 + offset_y
         vfx_canvas = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
-        paste_x = (tw - new_w) // 2 + offset_x
-        paste_y = (th - new_h) // 2 + offset_y
         vfx_canvas.paste(vfx_scaled, (paste_x, paste_y), vfx_scaled)
         vfx_img = vfx_canvas
     elif offset_x != 0 or offset_y != 0:

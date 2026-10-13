@@ -425,7 +425,7 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
-      min-height: 380px;
+      min-height: 520px;
     }
 
     .view-card {
@@ -455,7 +455,7 @@
       justify-content: center;
       position: relative;
       overflow: auto;
-      min-height: 300px;
+      min-height: 480px;
       background-image: 
         linear-gradient(45deg, #12161f 25%, transparent 25%), 
         linear-gradient(-45deg, #12161f 25%, transparent 25%), 
@@ -489,17 +489,99 @@
       image-rendering: crisp-edges;
       object-fit: contain;
       display: block;
-      width: 320px;
-      height: 320px;
+      width: 440px;
+      height: 440px;
       transition: width 0.15s ease-out, height 0.15s ease-out;
     }
 
     .original-target-img {
       object-fit: contain;
       display: block;
-      width: 320px;
-      height: 320px;
+      width: 440px;
+      height: 440px;
       transition: width 0.15s ease-out, height 0.15s ease-out;
+    }
+
+    /* 360度方向轮盘控件 */
+    .dial-container {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-top: 8px;
+    }
+
+    .dial-wheel-wrap {
+      position: relative;
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #101926 30%, #080c14 100%);
+      border: 2px solid var(--border-color);
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.6), inset 0 0 8px rgba(0, 240, 255, 0.15);
+      cursor: grab;
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .dial-wheel-wrap:active {
+      cursor: grabbing;
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 14px rgba(0, 240, 255, 0.4);
+    }
+
+    .dial-pointer {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 50%;
+      height: 2px;
+      background: linear-gradient(to right, transparent, var(--accent-cyan));
+      transform-origin: 0% 50%;
+      pointer-events: none;
+      transform: translateY(-50%) rotate(0deg);
+    }
+
+    .dial-pointer::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: -3px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 6px var(--accent-cyan);
+    }
+
+    .dial-center-dot {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #fff;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      box-shadow: 0 0 4px #fff;
+    }
+
+    .dial-quick-btn {
+      padding: 3px 6px;
+      font-size: 11px;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
+      background: #0f141d;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .dial-quick-btn:hover, .dial-quick-btn.active {
+      border-color: var(--accent-cyan);
+      color: var(--accent-cyan);
+      background: rgba(0, 240, 255, 0.1);
     }
 
     /* 底部操作与下载工具栏 */
@@ -941,19 +1023,60 @@
               </div>
             </div>
 
+            <!-- 360° 方向与倾斜轮盘 (专门解决45°斜向飞剑与光刃) -->
+            <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-top: 8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12px; font-weight:600; color:var(--text-main);">🧭 360° 旋转对齐 (45° 斜剑/光刃匹配)</span>
+                <strong id="lbl-rotation" style="color:var(--accent-cyan); font-family:monospace; font-size:13px;">0°</strong>
+              </div>
+
+              <div class="dial-container">
+                <!-- 交互式轮盘 (按住拖动自由旋转) -->
+                <div class="dial-wheel-wrap" id="dial-wheel" title="按住鼠标拖拽自由旋转角度">
+                  <div class="dial-pointer" id="dial-pointer"></div>
+                  <div class="dial-center-dot"></div>
+                </div>
+
+                <div style="flex:1;">
+                  <div style="display:flex; gap:4px; flex-wrap:wrap; margin-bottom:8px;">
+                    <button type="button" class="dial-quick-btn active" data-angle="0">0° 正向</button>
+                    <button type="button" class="dial-quick-btn" data-angle="45">45° 斜剑</button>
+                    <button type="button" class="dial-quick-btn" data-angle="90">90° 水平</button>
+                    <button type="button" class="dial-quick-btn" data-angle="135">135°</button>
+                    <button type="button" class="dial-quick-btn" data-angle="-45">-45° 反斜</button>
+                  </div>
+                  <input type="range" id="range-rotation" min="-180" max="180" step="1" value="0">
+                </div>
+              </div>
+            </div>
+
+            <!-- 画幅外扩防裁切留白 -->
+            <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-top: 8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                <span style="font-size:12px; font-weight:600; color:var(--text-main);">📐 画幅外扩 (防 45° 剑尖/大特效切边)</span>
+                <span class="value-badge" id="lbl-canvas-padding">+0% 标准</span>
+              </div>
+              <div class="capsule-group" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
+                <button type="button" class="capsule-btn active" data-padding="0">标准 0%</button>
+                <button type="button" class="capsule-btn" data-padding="0.2">+20% 扩展</button>
+                <button type="button" class="capsule-btn" data-padding="0.5">+50% 广角</button>
+                <button type="button" class="capsule-btn" data-padding="1.0">+100% 巨幅</button>
+              </div>
+            </div>
+
             <!-- 位置偏移微调 -->
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
               <div>
                 <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
                   <span>水平平移 X:</span><strong id="lbl-offset-x" style="color:var(--accent-cyan);">0 px</strong>
                 </div>
-                <input type="range" id="range-offset-x" min="-64" max="64" step="1" value="0" style="margin-top:4px;">
+                <input type="range" id="range-offset-x" min="-96" max="96" step="1" value="0" style="margin-top:4px;">
               </div>
               <div>
                 <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
                   <span>垂直平移 Y:</span><strong id="lbl-offset-y" style="color:var(--accent-cyan);">0 px</strong>
                 </div>
-                <input type="range" id="range-offset-y" min="-64" max="64" step="1" value="0" style="margin-top:4px;">
+                <input type="range" id="range-offset-y" min="-96" max="96" step="1" value="0" style="margin-top:4px;">
               </div>
             </div>
             <div class="switch-subtext" style="margin-top: 6px;">💡 可在右侧预览画布直接拖拽移动位置，按滑块自由拉伸特效匹配道具。</div>
@@ -1196,6 +1319,8 @@
       scaleX: 100,
       scaleY: 100,
       lockRatio: true,
+      rotation: 0,
+      canvasPadding: 0.0,
       layerOrder: 'vfx_on_top', // 'vfx_on_top' | 'solid_on_top'
       compositeLayer1Img: null,
       compositeLayer2Img: null,
@@ -1386,11 +1511,90 @@
       updateLiveComposite();
     });
 
+    // 360° 旋转对齐控制逻辑
+    const dialWheel = document.getElementById('dial-wheel');
+    const dialPointer = document.getElementById('dial-pointer');
+    const rangeRotation = document.getElementById('range-rotation');
+    const lblRotation = document.getElementById('lbl-rotation');
+
+    function setRotationAngle(angle) {
+      let norm = Math.round(angle);
+      while (norm > 180) norm -= 360;
+      while (norm < -180) norm += 360;
+      state.rotation = norm;
+
+      if (dialPointer) dialPointer.style.transform = `translateY(-50%) rotate(${norm}deg)`;
+      if (rangeRotation) rangeRotation.value = norm;
+      if (lblRotation) lblRotation.innerText = `${norm >= 0 ? '+' : ''}${norm}°`;
+
+      document.querySelectorAll('.dial-quick-btn').forEach(btn => {
+        btn.classList.toggle('active', parseInt(btn.dataset.angle) === norm);
+      });
+
+      updateLiveComposite();
+    }
+
+    if (rangeRotation) {
+      rangeRotation.addEventListener('input', (e) => {
+        setRotationAngle(parseInt(e.target.value) || 0);
+      });
+    }
+
+    document.querySelectorAll('.dial-quick-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ang = parseInt(btn.dataset.angle) || 0;
+        setRotationAngle(ang);
+      });
+    });
+
+    // 交互式 360° 轮盘拖拽旋转
+    let isDraggingDial = false;
+    function updateDialFromMouse(e) {
+      if (!dialWheel) return;
+      const rect = dialWheel.getBoundingClientRect();
+      const centerX = rect.left + rect.width / 2;
+      const centerY = rect.top + rect.height / 2;
+      const radians = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+      let deg = Math.round(radians * (180 / Math.PI));
+      setRotationAngle(deg);
+    }
+
+    if (dialWheel) {
+      dialWheel.addEventListener('mousedown', (e) => {
+        isDraggingDial = true;
+        updateDialFromMouse(e);
+      });
+      window.addEventListener('mousemove', (e) => {
+        if (isDraggingDial) updateDialFromMouse(e);
+      });
+      window.addEventListener('mouseup', () => {
+        isDraggingDial = false;
+      });
+    }
+
+    // 画幅外扩留白切换
+    document.querySelectorAll('.capsule-btn[data-padding]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.capsule-btn[data-padding]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.canvasPadding = parseFloat(btn.dataset.padding) || 0.0;
+        const padText = { '0': '+0% 标准', '0.2': '+20% 扩展', '0.5': '+50% 广角', '1': '+100% 巨幅', '1.0': '+100% 巨幅' };
+        const lblPad = document.getElementById('lbl-canvas-padding');
+        if (lblPad) lblPad.innerText = padText[btn.dataset.padding] || '+0%';
+        updateLiveComposite();
+      });
+    });
+
     document.getElementById('btn-reset-offset').addEventListener('click', () => {
       state.offsetX = 0;
       state.offsetY = 0;
       state.scaleX = 100;
       state.scaleY = 100;
+      setRotationAngle(0);
+      state.canvasPadding = 0.0;
+      document.querySelectorAll('.capsule-btn[data-padding]').forEach(b => b.classList.toggle('active', b.dataset.padding === '0'));
+      const lblPad = document.getElementById('lbl-canvas-padding');
+      if (lblPad) lblPad.innerText = '+0% 标准';
       document.getElementById('range-offset-x').value = 0;
       document.getElementById('range-offset-y').value = 0;
       if (rangeScaleX) rangeScaleX.value = 100;
@@ -1678,7 +1882,7 @@
     if (viewOrig) viewOrig.addEventListener('wheel', handleWheelZoom, { passive: false });
 
     function applyZoom() {
-      const standardSize = 340; // 视口对齐基准尺寸
+      const standardSize = 440; // 视口对齐基准尺寸放大至 440px
       const lblZoom = document.getElementById('lbl-zoom-val');
 
       if (state.zoom === 'stretch') {
@@ -2046,6 +2250,8 @@
           offset_y: state.offsetY,
           scale_x: (state.scaleX !== undefined ? state.scaleX : 100) / 100,
           scale_y: (state.scaleY !== undefined ? state.scaleY : 100) / 100,
+          rotation: state.rotation || 0,
+          canvas_padding: state.canvasPadding || 0,
           layer_order: state.layerOrder
         })
       });
@@ -2137,13 +2343,13 @@
       if (Math.abs(e.clientX - dragStartX) > 2 || Math.abs(e.clientY - dragStartY) > 2) {
         hasDragged = true;
       }
-      const curRenderWidth = imgPixel.clientWidth || 340;
+      const curRenderWidth = imgPixel.clientWidth || 440;
       const zoomRatio = curRenderWidth / (state.targetSize || 96);
       const dx = Math.round((e.clientX - dragStartX) / zoomRatio);
       const dy = Math.round((e.clientY - dragStartY) / zoomRatio);
 
-      state.offsetX = Math.max(-48, Math.min(48, dragInitOffsetX + dx));
-      state.offsetY = Math.max(-48, Math.min(48, dragInitOffsetY + dy));
+      state.offsetX = Math.max(-96, Math.min(96, dragInitOffsetX + dx));
+      state.offsetY = Math.max(-96, Math.min(96, dragInitOffsetY + dy));
 
       const rangeX = document.getElementById('range-offset-x');
       const rangeY = document.getElementById('range-offset-y');
@@ -2185,23 +2391,27 @@
       if (state.mode !== 'composite' || !state.compositeLayer1Img || !state.compositeLayer2Img) return;
       
       const size = state.targetSize || 96;
+      const padRatio = state.canvasPadding || 0.0;
+      const padPx = Math.round(size * padRatio / 2);
+      const canvasSize = size + padPx * 2;
+
       if (!reusableCanvas) {
         reusableCanvas = document.createElement('canvas');
       }
-      if (reusableCanvas.width !== size || reusableCanvas.height !== size) {
-        reusableCanvas.width = size;
-        reusableCanvas.height = size;
+      if (reusableCanvas.width !== canvasSize || reusableCanvas.height !== canvasSize) {
+        reusableCanvas.width = canvasSize;
+        reusableCanvas.height = canvasSize;
       }
 
       const ctx = reusableCanvas.getContext('2d', { willReadFrequently: false });
       ctx.imageSmoothingEnabled = false;
-      ctx.clearRect(0, 0, size, size);
+      ctx.clearRect(0, 0, canvasSize, canvasSize);
 
       const isSolidTop = (state.layerOrder === 'solid_on_top');
 
       function drawSolid() {
         ctx.globalCompositeOperation = 'source-over';
-        ctx.drawImage(state.compositeLayer1Img, 0, 0, size, size);
+        ctx.drawImage(state.compositeLayer1Img, padPx, padPx, size, size);
       }
 
       function drawVfx() {
@@ -2212,13 +2422,17 @@
         } else {
           ctx.globalCompositeOperation = 'source-over';
         }
+        ctx.save();
+        ctx.translate(canvasSize / 2 + state.offsetX, canvasSize / 2 + state.offsetY);
+        if (state.rotation) {
+          ctx.rotate((state.rotation * Math.PI) / 180);
+        }
         const scaleX = (state.scaleX !== undefined ? state.scaleX : 100) / 100;
         const scaleY = (state.scaleY !== undefined ? state.scaleY : 100) / 100;
-        const w = Math.round(size * scaleX);
-        const h = Math.round(size * scaleY);
-        const x = Math.round((size - w) / 2 + state.offsetX);
-        const y = Math.round((size - h) / 2 + state.offsetY);
-        ctx.drawImage(state.compositeLayer2Img, x, y, w, h);
+        const w = size * scaleX;
+        const h = size * scaleY;
+        ctx.drawImage(state.compositeLayer2Img, -w / 2, -h / 2, w, h);
+        ctx.restore();
       }
 
       if (isSolidTop) {
