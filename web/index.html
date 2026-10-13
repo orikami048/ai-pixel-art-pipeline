@@ -1092,7 +1092,7 @@
         <!-- 开始生成操作按钮 -->
         <div style="margin-top: 20px;">
           <button class="btn btn-primary" id="btn-run-process" style="width: 100%; justify-content: center; padding: 13px; font-size: 14px; font-weight: 700; box-shadow: 0 0 16px rgba(0, 240, 255, 0.45);">
-            ⚡ 开始生成 / 应用新参数
+            开始生成
           </button>
         </div>
 
@@ -1699,7 +1699,7 @@
         addLog('success', `图层 1 [${file.name}] 载入就绪`);
         if (state.layer2Base64) {
           document.getElementById('item-title-meta').innerText = '• 双图层已就绪 (调参后点击【开始生成】)';
-          addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮执行合体。');
+          addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【开始生成】按钮执行合体。');
         } else {
           document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
           addLog('info', '图层 1 已就绪，请继续在右侧拖入或点击导入图层 2 (发光特效)');
@@ -1718,7 +1718,7 @@
         addLog('success', `图层 2 [${file.name}] 载入就绪`);
         if (state.layer1Base64) {
           document.getElementById('item-title-meta').innerText = '• 双图层已就绪 (调参后点击【开始生成】)';
-          addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮执行合体。');
+          addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【开始生成】按钮执行合体。');
         } else {
           document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
           addLog('info', '图层 2 已就绪，请继续在左侧拖入或点击导入图层 1 (实体道具)');
@@ -1750,7 +1750,7 @@
           addLog('success', `图层 1 [${file.name}] 载入就绪`);
           if (state.layer2Base64) {
             document.getElementById('item-title-meta').innerText = '• 双图层已就绪 (调参后点击【开始生成】)';
-            addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮执行合体。');
+            addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【开始生成】按钮执行合体。');
           } else {
             document.getElementById('item-title-meta').innerText = '• 图层 1 已就绪，请继续导入图层 2';
             addLog('info', '图层 1 已就绪，请继续在右侧拖入或点击导入图层 2 (发光特效)');
@@ -1774,7 +1774,7 @@
           addLog('success', `图层 2 [${file.name}] 载入就绪`);
           if (state.layer1Base64) {
             document.getElementById('item-title-meta').innerText = '• 双图层已就绪 (调参后点击【开始生成】)';
-            addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮执行合体。');
+            addLog('success', '双图层均已就绪！请在左侧调整参数后，点击【开始生成】按钮执行合体。');
           } else {
             document.getElementById('item-title-meta').innerText = '• 图层 2 已就绪，请继续导入图层 1';
             addLog('info', '图层 2 已就绪，请继续在左侧拖入或点击导入图层 1 (实体道具)');
@@ -2030,7 +2030,7 @@
           tempImg.src = base64;
 
           applyZoom();
-          addLog('success', `图片 [${file.name}] 已成功载入左侧！请在左侧调整目标分辨率与参数，调整完毕后点击【⚡ 开始生成 / 应用新参数】按钮开始处理。`);
+          addLog('success', `图片 [${file.name}] 已成功载入左侧！请在左侧调整目标分辨率与参数，调整完毕后点击【开始生成】按钮开始处理。`);
           highlightRunButton();
         } catch (err) {
           addLog('error', `文件读取或处理异常: ${err.message}`);
@@ -2058,7 +2058,7 @@
           selectBatchItem(0);
           imgPixel.src = '';
           document.getElementById('item-title-meta').innerText = `• 共 ${fileArray.length} 张图片已导入 (调参后点击【开始生成】)`;
-          addLog('success', `批量队列已就绪 (${fileArray.length} 张图片)！请在左侧调整参数后，点击【⚡ 开始生成 / 应用新参数】按钮开始批量处理。`);
+          addLog('success', `批量队列已就绪 (${fileArray.length} 张图片)！请在左侧调整参数后，点击【开始生成】按钮开始批量处理。`);
           highlightRunButton();
         } catch (err) {
           addLog('error', `批量读取异常: ${err.message}`);
