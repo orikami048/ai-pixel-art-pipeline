@@ -17,7 +17,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from truepixel import background, ops  # noqa: E402
-from truepixel.pipeline import composite_layers, process_image, process_sheet, process_vfx_image  # noqa: E402
+from truepixel.pipeline import composite_layers, process_hd_pixel, process_image, process_sheet, process_vfx_image  # noqa: E402
 
 background.rembg_available = lambda: False  # 测试一律走纯色背景抠图
 
@@ -160,6 +160,21 @@ class BatchTest(unittest.TestCase):
             res2 = {r.name: r.status for r in batch.run(os.path.join(d, "asset_list.json"), log=lambda *_: None)}
             self.assertEqual(res2["item_sword"], "fresh")
 
+
+
+    def test_hd_pixel_keeps_colors_and_upscales_2k(self):
+        # 验证高清 2K 模式：保留原色（无滤色）、点对点硬边放大到 2K
+        im = Image.new("RGB", (320, 180), (120, 180, 240))
+        d = ImageDraw.Draw(im)
+        # 绘制彩条渐变测试，确保原色不被破坏
+        for i in range(10):
+            d.rectangle([i * 30, 0, (i + 1) * 30, 180], fill=(i * 20, 255 - i * 15, 100 + i * 12))
+        
+        hd_img, low_res = process_hd_pixel(im, target_size=2048, grid_size=320)
+        self.assertEqual(hd_img.width, 2048)
+        self.assertEqual(hd_img.height, int(round(180 * (2048 / 320))))
+        # 确保无滤色（颜色数丰富，未被强制压缩至16/32色）
+        self.assertGreater(ops.count_colors(hd_img), 8)
 
 class ServerTest(unittest.TestCase):
 

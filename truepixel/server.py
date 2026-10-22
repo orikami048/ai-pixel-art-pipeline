@@ -24,7 +24,7 @@ import zipfile
 from PIL import Image
 
 from . import ops
-from .pipeline import composite_layers, process_image, process_vfx_image
+from .pipeline import composite_layers, process_image, process_vfx_image, process_hd_pixel
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(ROOT, "web")
@@ -98,6 +98,11 @@ def handle_process(data: dict) -> dict:
         raw_w, raw_h = raw.size
         if mode == "vfx":
             native, prev = process_vfx_image(raw, size, colors, glow_gain=glow)
+        elif mode == "hd":
+            target_hd = int(data.get("target_size", 2048))
+            grid_hd = int(data.get("grid_size", 0)) or None
+            pixel_hd = int(data.get("pixel_size", 0)) or None
+            native, prev = process_hd_pixel(raw, target_size=target_hd, grid_size=grid_hd, pixel_size=pixel_hd)
         else:
             native, prev = process_image(raw, **solid_kw)
 
@@ -205,3 +210,4 @@ def run_server(port: int = DEFAULT_PORT, host: str = "127.0.0.1", open_browser: 
     except KeyboardInterrupt:
         print("\n[TruePixel Studio] 已停止")
         server.server_close()
+    

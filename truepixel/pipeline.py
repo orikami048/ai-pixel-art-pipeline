@@ -244,3 +244,60 @@ def process_sheet(
     for i, f in enumerate(out_frames):
         strip.paste(f, (i * frame_size, 0))
     return strip, out_frames
+
+
+# ================================================================ 高清 2K 真像素 (背景/场景)
+
+def process_hd_pixel(
+    input_image: Image.Image,
+    target_size: int = 2048,
+    grid_size: Optional[int] = None,
+    pixel_size: Optional[int] = None,
+    preview_scale: Optional[int] = None,
+) -> Tuple[Image.Image, Image.Image]:
+    """
+    全景/背景图 → 2K 高清真像素图。
+    - 绝无滤色：100% 保持原图的真实原始色彩、自然渐变与光影。
+    - 像素网格锁定：通过面积采样消除 AI 模糊与高频杂色，将细节对齐到规整的硬边像素格点。
+    - 2K 无损放大：以最近邻（Nearest-Neighbor）点对点无损等比放大到 2K 分辨率。
+    返回 (2K 高清成品图, 低清基准预览图)。
+    """
+    img = input_image.convert("RGBA") if input_image.mode == "RGBA" else input_image.convert("RGB")
+    orig_w, orig_h = img.size
+
+    # 1. 确定基准低清像素网格尺寸
+    if pixel_size and pixel_size > 1:
+        grid_w = max(1, orig_w // pixel_size)
+        grid_h = max(1, orig_h // pixel_size)
+    elif grid_size and grid_size > 0:
+        if orig_w >= orig_h:
+            grid_w = grid_size
+            grid_h = max(1, int(round(orig_h * (grid_size / orig_w))))
+        else:
+            grid_h = grid_size
+            grid_w = max(1, int(round(orig_w * (grid_size / grid_h))))
+    else:
+        # 默认：如果原图最长边大于 640，则按最长边 640 进行规整量化；否则按原尺寸作为硬像素基准
+        max_dim = max(orig_w, orig_h)
+        if max_dim > 640:
+            ratio = 640.0 / max_dim
+            grid_w = max(1, int(round(orig_w * ratio)))
+            grid_h = max(1, int(round(orig_h * ratio)))
+        else:
+            grid_w, grid_h = orig_w, orig_h
+
+    # 2. 面积均值采样（消除 AI 伪像素抗锯齿与模糊毛刺，还原为硬边真像素）
+    low_res = img.resize((grid_w, grid_h), Image.Resampling.BOX)
+
+    # 3. 计算 2K 目标尺寸（以 target_size 为最长边）
+    if grid_w >= grid_h:
+        target_w = target_size
+        target_h = max(1, int(round(grid_h * (target_size / grid_w))))
+    else:
+        target_h = target_size
+        target_w = max(1, int(round(grid_w * (target_size / grid_h))))
+
+    # 4. 最近邻（Nearest）无损放大到 2K，保证每个像素都是刀削斧凿般的清晰硬方块
+    hd_img = low_res.resize((target_w, target_h), Image.Resampling.NEAREST)
+
+    return hd_img, ops.preview(low_res, preview_scale or 2)

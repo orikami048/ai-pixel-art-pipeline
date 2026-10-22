@@ -92,6 +92,23 @@ def cmd_tiers(a) -> None:
         print(p)
 
 
+
+def cmd_hd(a) -> None:
+    from . import ops
+    from .pipeline import process_hd_pixel
+
+    src = Image.open(a.input)
+    hd_img, low_res = process_hd_pixel(
+        src,
+        target_size=a.target,
+        grid_size=a.grid,
+        pixel_size=a.pixel_size,
+    )
+    _save(hd_img, a.output)
+    print(f"✅ {a.output}  2K真像素完成：{hd_img.width}x{hd_img.height}（基准网格 {low_res.width}x{low_res.height}，保持原色无滤色）")
+    if a.preview:
+        _save(low_res, a.output[:-4] + "_grid.png")
+
 def cmd_serve(a) -> None:
     from .server import run_server
 
@@ -146,6 +163,16 @@ def build_parser() -> argparse.ArgumentParser:
     t.add_argument("out_dir")
     t.add_argument("--slot", required=True, help="部位名，如 weapon / armor")
     t.set_defaults(func=cmd_tiers)
+
+    
+    hd = sub.add_parser("hd", help="全景背景 → 2K 高清真像素（绝无滤色，点对点锐利方块）")
+    hd.add_argument("input", help="输入背景图")
+    hd.add_argument("output", help="输出 2K 图像路径")
+    hd.add_argument("--target", type=int, default=2048, help="目标最长边（默认 2048，即 2K）")
+    hd.add_argument("--grid", type=int, help="基准像素网格最长边（如 512, 640；默认自适应）")
+    hd.add_argument("--pixel-size", type=int, help="每个像素方块对应的原图像素大小（如 2, 4）")
+    hd.add_argument("--preview", action="store_true", help="另存一份基准网格低清图")
+    hd.set_defaults(func=cmd_hd)
 
     sv = sub.add_parser("serve", help="启动网页工作室")
     sv.add_argument("--port", type=int, default=7860)
