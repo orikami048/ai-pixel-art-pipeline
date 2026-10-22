@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "truepixel"
+version = "2.0.0"
+description = "AI 伪像素图 → 真像素游戏素材（去背景、去暗边、减色、1px 描边、精灵表）"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = ["pillow>=10.0", "numpy>=1.24", "opencv-python>=4.8"]
+
+[project.optional-dependencies]
+# AI 抠图；不装时退回纯色背景抠图
+ai = ["rembg>=2.0.50", "onnxruntime>=1.16"]
+
+[project.scripts]
+truepixel = "truepixel.cli:main"
+
+[tool.setuptools]
+packages = ["truepixel"]

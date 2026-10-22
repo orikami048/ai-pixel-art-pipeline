@@ -4,4 +4,11 @@ __pycache__/
 .DS_Store
 Thumbs.db
 venv/
+.venv/
 .env
+*.egg-info/
+build/
+dist/
+# 调试输出不要提交
+debug_*.png
+test_*_out.png

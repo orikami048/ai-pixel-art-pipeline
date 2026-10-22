@@ -1,115 +1,129 @@
 # TruePixel Studio 🎨
 
-> **Production-Grade AI Fake-Pixel to True-Pixel Game Asset Pipeline**  
-> 一键将 AI（Midjourney / DALL-E / Imagen / Stable Diffusion）生成的“伪像素”图像转化为真正纯净、可直接导入游戏引擎（Unity / Unreal / Godot / Cocos）的真像素透明 PNG 与精灵图资产。支持开箱即用的拖拽式 Web 交互界面与批量导出。
+> 把 AI（Midjourney / DALL·E / Imagen / Stable Diffusion / Gemini）生成的"伪像素"图，转换成可以直接放进游戏引擎的**真像素**透明 PNG 和精灵表。
+> 有拖拽式网页工作室，也有命令行和批处理。
 
----
+## 解决什么问题
 
-## 🌟 核心解决的技术痛点
+| AI 原图的问题 | TruePixel 的处理 |
+|---|---|
+| 背景不干净，抠完有 1~2px 灰黑毛边 | rembg 抠图 → 透明度二值化 → 形态学腐蚀切掉暗边 |
+| 抠图把光晕、细剑尖误删 | 纯色背景时按色差把误删的前景找回来 |
+| 抠图残留零星飞屑 | 连通域面积过滤 |
+| 不是真像素：分辨率高、抗锯齿、颜色多 | 裁到主体 → 等比缩放居中 → 减色或映射到统一调色板 |
+| 轮廓不清楚 | 1px 正交闭合描边 |
+| 动画帧大小不一、角色抖动 | 精灵表固定锚点：全部帧按第 0 帧的比例和脚底中心对齐 |
+| 每个品阶都要重新画 | 仙品母版一键变色出十阶品质 |
 
-1. **暗色黑边杂色（Dark Edge Fringing & Bleeding）**：
-   - AI 在生成像素道具时常自带渐变半透明羽化边缘与背景污染，导致直接抠图后出现 1~2px 灰黑噪点圈。本引擎采用 OpenCV 图像形态学侵蚀（Alpha Erosion）结合 Decontamination 算法，彻底切除杂色伪边。
-2. **AI“伪像素”平滑与混色（Fake Pixel Quantization）**：
-   - AI 生成图并非真正像素，而是带有抗锯齿抗混叠的连续高分图像。本引擎提供智能色彩聚类降阶（Median Cut / Color Palette Quantization），还原 8/16/24/32 经典复古色板。
-3. **1px 闭合硬描边（Pixel-Perfect Solid Outlines）**：
-   - 提取实体不透明区域的边缘拓扑，施加严格 1px 经典正交（Orthogonal 4-Connectivity）闭合黑色描边，确保纯正复古独立游戏（Chucklefish / Terraria 风格）的高对比度边缘辨识度。
-4. **孤立噪点过滤与画幅居中对齐（De-noising & Centering）**：
-   - 自动滤除 AI 背景剥离后残留的零星孤立悬浮像素（Speckle Filter），并自动计算实体最小包围盒并在目标画布（如 32×32、64×64）中完成自适应等比缩放与居中。
-
----
-
-## 🖥️ 现代化拖拽式 Web 前端 (TruePixel Web Studio)
-
-内置零外部重量级依赖（无需安装 Node.js/Vue，直接基于 Python 原生轻量服务）的沉浸式暗黑游戏风 Web 控制台。
-
-### 一键启动
+## 安装
 
 ```bash
-python app.py
+pip install -r requirements.txt          # 含 rembg（AI 抠图，首次运行会下载 u2net 模型）
+# 或者作为包安装，得到 truepixel 命令：
+pip install -e ".[ai]"
 ```
 
-终端启动后在浏览器打开：**`http://localhost:7860`**
+不装 rembg 也能用：会退回到"按四角颜色做色差抠图"，对纯色背景的原图通常足够。
 
-### 前端功能特性
+## 网页工作室
 
-- **🖱️ 拖拽即生成**：支持单图直接拖拽到画布、剪贴板粘贴或文件选择，毫秒级即时处理。
-- **📦 批量处理托盘**：支持多张图片同时拖入，排队批量转换并一键打包下载 ZIP。
-- **🎛️ 实时参数调优**：
-  - **目标分辨率**：`32×32`（经典复古背包图标）、`48×48`、`64×64`（推荐）、`96×96`、`128×128`
-  - **复古色板限制**：`8` ~ `64` 色滑块实时限制，还原真实硬件限制调色盘
-  - **AI 智能去背景**：基于 rembg 深度学习模型自动剥离背景
-  - **暗边切除强度**：`0` ~ `3px` 形态学收缩
-  - **1px 闭合描边开关**：可自由开关并指定描边颜色（默认 `#000000` 纯黑）
-  - **孤立噪点过滤**：自动清除 `< 15px` 的悬空杂色噪点
-- **🔍 像素级对齐缩放预览**：支持 `1x`、`2x`、`4x`、`8x` 最近邻无损缩放（Nearest-Neighbor）并提供棋盘格透明底与原图/成品同屏对比。
+```bash
+python -m truepixel serve        # 或双击 start_web.bat，或 python app.py
+```
 
----
+浏览器打开 http://127.0.0.1:7860 。支持拖拽 / 粘贴 / 批量、实时调参、三种模式（实体道具 / 发光特效 / 双层合体）、最近邻放大预览、一键打包 ZIP。
+想让局域网里的手机访问：`python -m truepixel serve --host 0.0.0.0`。
 
-## 🎨 通用游戏像素美术生图规范 (Universal Prompt Engineering)
+## 命令行
 
-AI 模型生图时，推荐使用以下结构化提示词模板，确保生成物具备**清晰的道具轮廓、高对比度与纯净背景**：
+```bash
+# 单张：96x96、32 色、去背景、描边
+python -m truepixel single 原图.png 成品.png --size 96 --colors 32 --preview 8
+
+# 统一调色板 / 地图图块（不去背景不描边）/ 发光特效
+python -m truepixel single 原图.png 成品.png --size 32 --palette palette.png
+python -m truepixel single 草地.png tile.png --size 16 --keep-bg --no-outline
+python -m truepixel single 剑气.png aura.png --vfx --size 96
+
+# 按素材清单批量处理（见下文）
+python -m truepixel batch asset_list.json
+
+# 3x3 九宫格动画 → 1x8 横向精灵表（每帧 96x96，另存 3 倍高清版）
+python -m truepixel sheet 九宫格.jpg sheet.png --rows 3 --cols 3 --frames 8 --size 96 --hd 3
+
+# 仙品母版 → 十阶品质（凡/良/灵/玄/地/天/宝/仙/神/混沌）
+python -m truepixel tiers weapon_xian.png 输出目录 --slot weapon
+```
+
+旧命令 `python true_pixel.py --input a.png --output b.png --size 64 --colors 24` 仍然可用，会自动转换成新命令。
+
+## 批处理清单
+
+`asset_list.json`（路径都相对清单所在目录）：
+
+```json
+{
+  "defaults": { "raw_dir": "raw", "out_dir": "assets", "palette": "assets/palette.png",
+                "max_colors": 16, "preview_scale": 8 },
+  "assets": [
+    { "name": "weapon_sword_xian", "folder": "equip", "size": 96, "content_size": 78,
+      "kind": "sprite", "prompt": "给生图模型的提示词" },
+    { "name": "tile_grass_01", "folder": "tiles", "size": 16, "kind": "tile" }
+  ]
+}
+```
+
+- 原图放在 `raw/<name>.png|jpg|webp`，输出到 `assets/<folder>/<name>.png`。
+- `kind`：`sprite` 去背景+描边；`tile` 铺满整格；`vfx` 发光特效。
+- 每个素材可以用 `options` 覆盖任意 `process_image` 参数。
+- 只处理新的或原图更新过的素材（`--force` 全部重做，`--only a b` 只做指定的）。
+- 输出 `assets/_preview/_contact_sheet.png` 总览图和 `batch_report.md` 报告。
+
+## 生图提示词模板
 
 ```text
-16-bit retro pixel art game sprite of [道具/角色/怪物名称及特征], 
-isolated on a dark neutral background, 
-[核心材质与色调: 如 silver steel / glowing azure / crimson leather], 
-[核心细节: 如 glowing runes / brass trim / ornate details], 
-clean solid 1px dark pixel outline, high contrast vibrant retro RPG inventory icon, 
-crisp pixelated edges, authentic pixel art game asset
+16-bit retro pixel art game sprite of [道具/角色/怪物及特征],
+isolated on a plain white background, [材质与色调], [细节],
+clean solid 1px dark pixel outline, high contrast, crisp pixelated edges
 ```
 
----
+发光特效改成 `on a pure black background`，不要描边。
 
-## 🚀 快速开始
+## Python 接口
 
-### 1. 安装环境依赖
-
-```bash
-pip install -r requirements.txt
+```python
+from truepixel import process_image, process_vfx_image, composite_layers, process_sheet
+native, preview = process_image(Image.open("raw.png"), target_size=96, color_count=32)
 ```
 
-*(主要包含 `rembg`, `opencv-python`, `pillow`, `numpy`, `onnxruntime`)*
+`from true_pixel_core import process_image` 这种旧写法也还能用。
 
-### 2. 启动图形化 Web UI
-
-```bash
-python app.py
-```
-
-访问 `http://localhost:7860` 体验完整交互。
-
-### 3. 命令行 (CLI) 批处理与单图转换
-
-```bash
-# 单图转换（自动去背、居中缩放到 64px、限定 24 色并添加 1px 闭合描边）
-python true_pixel.py --input raw_icon.png --output clean_icon.png --size 64 --colors 24
-```
-
-### 4. 角色动画序列大图整合 (Sprite Sheet)
-
-```bash
-python build_outlined_spritesheet.py
-```
-
----
-
-## 🛠️ 项目目录结构
+## 目录结构
 
 ```text
-ai-pixel-art-pipeline/
-├── app.py                     # Web Studio 后端服务 (轻量 HTTP Server)
-├── true_pixel_core.py         # 核心像素处理引擎 (形态学去背、色板规整、1px描边)
-├── true_pixel.py              # CLI 命令行处理入口
-├── web/
-│   └── index.html             # 现代化拖拽式像素工作室前端 (原生 HTML5 + CSS + JS)
-├── build_outlined_spritesheet.py # 动画帧序列坐标对齐与拼图脚本
-├── examples/                  # 示例参考原画与输出成果
-├── requirements.txt           # Python 依赖项
-└── README.md                  # 项目文档
+truepixel/
+  ops.py          底层像素操作（描边、去飞屑、透明度、调色板、缩放）——唯一实现
+  background.py   背景移除（rembg + 纯色背景保底）
+  pipeline.py     实体 / 特效 / 双层合成 / 精灵表
+  tiers.py        十阶品质变色
+  batch.py        素材清单批处理 + 总览图 + 报告
+  cli.py          命令行
+  server.py       网页工作室后端
+web/index.html    网页前端（原生 HTML/CSS/JS）
+scripts/          一次性/专用脚本（程序化生成 32px 装备、装备母版流水线）
+tests/            python -m unittest discover -s tests
+examples/         示例原图
+app.py, true_pixel.py, true_pixel_core.py   旧入口的兼容层
 ```
 
----
+## 开发
 
-## 📄 License
+```bash
+python -m unittest discover -s tests -v
+```
 
-MIT License
+协作约定、设计决策和踩坑记录见 [AGENTS.md](AGENTS.md)。
+
+## License
+
+MIT

@@ -25,36 +25,15 @@ Outputs:
 - Unified equip spritesheet
 """
 
+import argparse
 import os
-from PIL import Image
+import sys
+
 import numpy as np
+from PIL import Image
 
-
-def add_solid_pixel_outline(rgba_arr: np.ndarray, outline_color=(20, 18, 26)) -> np.ndarray:
-    """Apply strict 1px orthogonal solid pixel outline to alpha boundaries."""
-    h, w = rgba_arr.shape[:2]
-    alpha = rgba_arr[:, :, 3]
-
-    edge_mask = np.zeros((h, w), dtype=bool)
-    for y in range(h):
-        for x in range(w):
-            if alpha[y, x] > 0:
-                for dy, dx in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-                    ny, nx = y + dy, x + dx
-                    if 0 <= ny < h and 0 <= nx < w:
-                        if alpha[ny, nx] == 0:
-                            edge_mask[y, x] = True
-                            break
-                    else:
-                        edge_mask[y, x] = True
-                        break
-
-    out = rgba_arr.copy()
-    out[edge_mask, 0] = outline_color[0]
-    out[edge_mask, 1] = outline_color[1]
-    out[edge_mask, 2] = outline_color[2]
-    out[edge_mask, 3] = 255
-    return out
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from truepixel.ops import add_outline  # noqa: E402
 
 
 # 10阶修仙品质色彩与背景粒子矩阵 (Ten Cultivation Quality Tiers & Background Particle Colors)
@@ -547,7 +526,7 @@ def build_all_assets(output_dir: str):
             raw_arr = gen_fn(pal)
             
             # Apply 1px solid black pixel outline
-            outlined_arr = add_solid_pixel_outline(raw_arr, outline_color=(18, 20, 26))
+            outlined_arr = add_outline(raw_arr, (18, 20, 26))
             img_32 = Image.fromarray(outlined_arr, mode="RGBA")
 
             # 1. Save 32x32 native PNG
@@ -585,6 +564,7 @@ def build_all_assets(output_dir: str):
 
 
 if __name__ == "__main__":
-    out = r"D:\projects\xiuxian-game\textures\equip"
-    build_all_assets(out)
+    ap = argparse.ArgumentParser(description="程序化生成 8 部位 × 10 品阶的 32x32 装备图标")
+    ap.add_argument("out_dir", nargs="?", default=r"D:\projects\xiuxian-game\textures\equip")
+    build_all_assets(ap.parse_args().out_dir)
 
