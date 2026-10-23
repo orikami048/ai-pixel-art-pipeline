@@ -919,34 +919,35 @@
       <div class="panel-card">
         <div class="panel-title">⚙️ 像素化核心参数</div>
 
-        <!-- 1. 处理模式切换 -->
-        <div class="form-group">
-          <div class="form-label">
-            <span>处理模式</span>
+        <!-- 1. 处理模式 + 目标分辨率 (并排紧凑下拉框) -->
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+          <div class="form-group" style="margin-bottom:0;">
+            <div class="form-label">
+              <span>处理模式</span>
+            </div>
+            <select class="form-select" id="select-mode">
+              <option value="solid" selected>🗡️ 道具 (实体单图)</option>
+              <option value="vfx">✨ 特效 (发光单图)</option>
+              <option value="composite">⚔️ 双图层合体</option>
+            </select>
           </div>
-          <div class="capsule-group" style="grid-template-columns: repeat(3, 1fr);">
-            <button class="capsule-btn active" data-mode="solid">道具</button>
-            <button class="capsule-btn" data-mode="vfx">特效</button>
-            <button class="capsule-btn" data-mode="composite">双图层</button>
-          </div>
-        </div>
 
-        <!-- 2. 分辨率选择 (下拉框) -->
-        <div class="form-group">
-          <div class="form-label">
-            <span>目标分辨率</span>
-            <span class="value-badge" id="lbl-resolution">96 × 96</span>
+          <div class="form-group" style="margin-bottom:0;">
+            <div class="form-label">
+              <span>目标分辨率</span>
+              <span class="value-badge" id="lbl-resolution">96 × 96</span>
+            </div>
+            <select class="form-select" id="select-resolution">
+              <option value="32">32 × 32 Px</option>
+              <option value="48">48 × 48 Px</option>
+              <option value="64">64 × 64 Px</option>
+              <option value="96" selected>96 × 96 Px (默认)</option>
+              <option value="128">128 × 128 Px</option>
+              <option value="256">256 × 256 Px</option>
+              <option value="512">512 × 512 Px</option>
+              <option value="1024">1024 × 1024 Px</option>
+            </select>
           </div>
-          <select class="form-select" id="select-resolution">
-            <option value="32">32 × 32 Px (经典小图标 / 极简像素)</option>
-            <option value="48">48 × 48 Px (复古 RPG 角色 / 装备)</option>
-            <option value="64">64 × 64 Px (标准武器道具)</option>
-            <option value="96" selected>96 × 96 Px (独立游戏主道具 - 默认)</option>
-            <option value="128">128 × 128 Px (高精法宝 / 大精灵)</option>
-            <option value="256">256 × 256 Px (256px 细腻像素图)</option>
-            <option value="512">512 × 512 Px (512px 场景贴图)</option>
-            <option value="1024">1024 × 1024 Px (1024px 巨幅贴图)</option>
-          </select>
         </div>
 
         <!-- 3. 调色板颜色数 -->
@@ -971,92 +972,98 @@
             </select>
           </div>
 
-          <!-- Alpha 剔除阈值滑块 -->
-          <div class="form-group" style="margin-bottom: 14px;">
-            <div class="form-label">
-              <span>Alpha 判定阈值</span>
-              <span class="value-badge" id="lbl-alpha-thresh">≥ 100</span>
-            </div>
-            <input type="range" id="range-alpha-thresh" min="50" max="180" step="5" value="100">
-            <div class="switch-subtext" style="margin-top: 4px;">容差分离默认 100；连通增强默认 120 (可按需微调)</div>
-          </div>
-
           <!-- 原始输入道具图主体缩放 (Solid Scale) -->
-          <div class="form-group" id="solid-scale-wrap" style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;">
+          <div class="form-group" id="solid-scale-wrap" style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 10px; margin-bottom: 10px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:12px; font-weight:600; color:var(--text-main);">🗡️ 原始道具图主体缩放</span>
               <strong id="lbl-solid-scale" style="color:var(--accent-cyan);">100%</strong>
             </div>
-            <input type="range" id="range-solid-scale" min="20" max="250" step="2" value="100" style="margin-top:6px;">
-            <div class="switch-subtext" style="margin-top:4px;">拖拽滑块即时预览缩放 (20% ~ 250%)</div>
+            <input type="range" id="range-solid-scale" min="20" max="250" step="2" value="100" style="margin-top:5px;">
+            <div class="switch-subtext" style="margin-top:3px;">拖拽滑块即时 60FPS 顺滑预览缩放 (20% ~ 250%)</div>
           </div>
 
-          <!-- 1px 描边 -->
-          <div class="switch-row">
-            <div>
-              <div class="switch-label">1px 描边</div>
-              <div class="switch-subtext">独立游戏复古像素硬轮廓</div>
+          <!-- 并排滑块：Alpha 判定阈值 + 杂色孤立微粒过滤 -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <div class="form-label">
+                <span>Alpha 阈值</span>
+                <span class="value-badge" id="lbl-alpha-thresh">≥ 100</span>
+              </div>
+              <input type="range" id="range-alpha-thresh" min="50" max="180" step="5" value="100">
             </div>
-            <label class="switch">
-              <input type="checkbox" id="chk-outline" checked>
-              <span class="slider"></span>
-            </label>
-          </div>
-
-          <!-- 描边颜色 -->
-          <div class="form-group" style="margin-top: 12px;" id="outline-color-group">
-            <div class="form-label">
-              <span>描边颜色</span>
-              <span class="value-badge" id="lbl-outline-color">#12141a</span>
-            </div>
-            <div class="color-picker-wrap">
-              <input type="color" id="picker-outline-color" value="#12141a">
-              <span style="font-size:12px; color:var(--text-muted);">推荐纯黑或深墨色</span>
+            <div class="form-group" style="margin-bottom:0;">
+              <div class="form-label">
+                <span>杂色微粒过滤</span>
+                <span class="value-badge" id="lbl-noise">18 px</span>
+              </div>
+              <input type="range" id="range-noise" min="0" max="50" step="2" value="18">
             </div>
           </div>
 
-          <!-- 孤立噪点过滤 -->
-          <div class="form-group" style="margin-top: 16px;">
-            <div class="form-label">
-              <span>杂色孤立微粒过滤</span>
-              <span class="value-badge" id="lbl-noise">18 px</span>
+          <!-- 单行紧凑：1px 描边开关 + 描边颜色拾取 -->
+          <div style="display:flex; justify-content:space-between; align-items:center; background:#0b101a; border:1px solid var(--border-color); border-radius:6px; padding:6px 10px; margin-bottom: 10px;">
+            <div style="display:flex; align-items:center; gap:8px;">
+              <label class="switch" style="width:34px; height:18px;">
+                <input type="checkbox" id="chk-outline" checked>
+                <span class="slider" style="border-radius:18px;"></span>
+              </label>
+              <span style="font-size:12px; font-weight:600; color:var(--text-main);">1px 闭合描边</span>
             </div>
-            <input type="range" id="range-noise" min="0" max="50" step="2" value="18">
+            <div id="outline-color-group" style="display:flex; align-items:center; gap:6px;">
+              <span style="font-size:11px; color:var(--text-muted);">颜色:</span>
+              <input type="color" id="picker-outline-color" value="#12141a" style="width:22px; height:22px; border:none; padding:0; border-radius:4px; cursor:pointer;">
+              <strong id="lbl-outline-color" style="font-size:11px; color:var(--accent-cyan); font-family:monospace;">#12141a</strong>
+            </div>
           </div>
         </div>
 
         <!-- 特效/合体专属控制组 (VFX & Composite Controls) -->
         <div id="vfx-controls-group" style="display:none; border-top:1px solid var(--border-color); padding-top:14px; margin-top:12px;">
-          <!-- 发光强度滑块 -->
-          <div class="form-group">
-            <div class="form-label">
-              <span>✨ 特效发光增益</span>
-              <span class="value-badge" id="lbl-glow">115%</span>
+          <!-- 特效发光增益 + 画幅外扩留白并排 -->
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <div class="form-label">
+                <span>✨ 特效发光增益</span>
+                <span class="value-badge" id="lbl-glow">115%</span>
+              </div>
+              <input type="range" id="range-glow" min="50" max="250" step="5" value="115">
             </div>
-            <input type="range" id="range-glow" min="50" max="250" step="5" value="115">
+
+            <div class="form-group" style="margin-bottom:0;" id="canvas-padding-group">
+              <div class="form-label">
+                <span>📐 画幅外扩留白</span>
+              </div>
+              <select class="form-select" id="select-canvas-padding">
+                <option value="0" selected>标准 0%</option>
+                <option value="0.2">+20% 扩展</option>
+                <option value="0.5">+50% 广角</option>
+                <option value="1.0">+100% 巨幅</option>
+              </select>
+            </div>
           </div>
 
-          <!-- 混合模式选择 (下拉框) -->
-          <div class="form-group" id="blend-mode-wrap">
-            <div class="form-label">
-              <span>特效图层混合模式</span>
+          <!-- 混合模式 + 叠放层级并排下拉框 -->
+          <div style="display:none; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;" id="composite-meta-row">
+            <div class="form-group" style="margin-bottom:0;" id="blend-mode-wrap">
+              <div class="form-label">
+                <span>特效混合模式</span>
+              </div>
+              <select class="form-select" id="select-blend-mode">
+                <option value="additive" selected>加色发光 (Add)</option>
+                <option value="screen">滤色混合 (Screen)</option>
+                <option value="normal">正常叠加 (Alpha)</option>
+              </select>
             </div>
-            <select class="form-select" id="select-blend-mode">
-              <option value="additive" selected>加色发光 (Additive) - 炫酷仙剑/神兵光刃</option>
-              <option value="screen">滤色混合 (Screen) - 柔和背景光晕</option>
-              <option value="normal">正常叠加 (Alpha) - 普通图层覆盖</option>
-            </select>
-          </div>
 
-          <!-- 图层上下叠放层级选择 (下拉框) -->
-          <div class="form-group" id="layer-order-wrap" style="display:none; margin-top: 10px;">
-            <div class="form-label">
-              <span>🔀 图层叠放上下层级</span>
+            <div class="form-group" style="margin-bottom:0;" id="layer-order-wrap">
+              <div class="form-label">
+                <span>叠放层级</span>
+              </div>
+              <select class="form-select" id="select-layer-order">
+                <option value="vfx_on_top" selected>✨ 特效在顶</option>
+                <option value="solid_on_top">🗡️ 实体在顶</option>
+              </select>
             </div>
-            <select class="form-select" id="select-layer-order">
-              <option value="vfx_on_top" selected>✨ 特效在顶 (光芒覆盖在道具前方)</option>
-              <option value="solid_on_top">🗡️ 实体在顶 (光芒作为背后背景光晕)</option>
-            </select>
           </div>
 
           <!-- 特效自由拉伸与位置偏移微调 -->
@@ -1078,22 +1085,22 @@
                 </label>
               </div>
 
-              <!-- 宽度拉伸 / 缩放 -->
-              <div>
-                <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
-                  <span id="lbl-scale-x-name">宽度拉伸 / 整体缩放:</span>
-                  <strong id="lbl-scale-x" style="color:var(--accent-cyan);">100%</strong>
+              <!-- 宽度拉伸 + 高度拉伸 并排两列 -->
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
+                <div>
+                  <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                    <span id="lbl-scale-x-name">宽 / 等比:</span>
+                    <strong id="lbl-scale-x" style="color:var(--accent-cyan);">100%</strong>
+                  </div>
+                  <input type="range" id="range-scale-x" min="20" max="300" step="2" value="100" style="margin-top:4px;">
                 </div>
-                <input type="range" id="range-scale-x" min="20" max="300" step="2" value="100" style="margin-top:4px;">
-              </div>
-
-              <!-- 高度拉伸 -->
-              <div style="margin-top:8px;">
-                <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
-                  <span>高度拉伸:</span>
-                  <strong id="lbl-scale-y" style="color:var(--accent-cyan);">100%</strong>
+                <div>
+                  <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                    <span>高度拉伸:</span>
+                    <strong id="lbl-scale-y" style="color:var(--accent-cyan);">100%</strong>
+                  </div>
+                  <input type="range" id="range-scale-y" min="20" max="300" step="2" value="100" style="margin-top:4px;">
                 </div>
-                <input type="range" id="range-scale-y" min="20" max="300" step="2" value="100" style="margin-top:4px;">
               </div>
             </div>
 
@@ -1124,18 +1131,7 @@
               </div>
             </div>
 
-            <!-- 画幅外扩留白 (下拉框) -->
-            <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; margin-top: 8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-size:12px; font-weight:600; color:var(--text-main);">📐 画幅外扩 (防 45° 剑尖切边)</span>
-              </div>
-              <select class="form-select" id="select-canvas-padding">
-                <option value="0" selected>标准画幅 (+0% 标准)</option>
-                <option value="0.2">+20% 扩展 (微量防切边)</option>
-                <option value="0.5">+50% 广角 (45° 斜剑防切边)</option>
-                <option value="1.0">+100% 巨幅 (大范围外溢光芒)</option>
-              </select>
-            </div>
+
 
             <!-- 位置偏移微调 -->
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:10px;">
@@ -1459,34 +1455,52 @@
       });
     }
 
-    // 处理模式切换监听
-    document.querySelectorAll('.capsule-btn[data-mode]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.capsule-btn[data-mode]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.mode = btn.dataset.mode;
+    // 核心函数：处理模式切换
+    function setPipelineMode(mode) {
+      state.mode = mode;
 
-        const modeNames = { solid: '道具', vfx: '特效', composite: '双图层' };
-        const lblM = document.getElementById('lbl-mode');
-        if (lblM) lblM.innerText = modeNames[state.mode];
+      const isSolid = state.mode === 'solid';
+      const isVfx = state.mode === 'vfx';
+      const isComposite = state.mode === 'composite';
 
-        const isSolid = state.mode === 'solid';
-        const isVfx = state.mode === 'vfx';
-        const isComposite = state.mode === 'composite';
+      const solidGroup = document.getElementById('solid-controls-group');
+      if (solidGroup) solidGroup.style.display = isVfx ? 'none' : 'block';
 
-        document.getElementById('solid-controls-group').style.display = isVfx ? 'none' : 'block';
-        document.getElementById('vfx-controls-group').style.display = (isVfx || isComposite) ? 'block' : 'none';
-        document.getElementById('blend-mode-wrap').style.display = isComposite ? 'block' : 'none';
-        document.getElementById('layer-order-wrap').style.display = isComposite ? 'block' : 'none';
-        document.getElementById('layer-transform-wrap').style.display = isComposite ? 'block' : 'none';
-        document.getElementById('drag-hint-badge').style.display = isComposite ? 'flex' : 'none';
-        document.getElementById('pixel-frame').classList.toggle('draggable', isComposite);
-        imgPixel.style.cursor = isComposite ? 'grab' : 'zoom-in';
+      const vfxGroup = document.getElementById('vfx-controls-group');
+      if (vfxGroup) vfxGroup.style.display = (isVfx || isComposite) ? 'block' : 'none';
 
-        document.getElementById('dropzone').style.display = isComposite ? 'none' : 'block';
-        document.getElementById('composite-dropzone-wrap').style.display = isComposite ? 'grid' : 'none';
+      const compMetaRow = document.getElementById('composite-meta-row');
+      if (compMetaRow) compMetaRow.style.display = isComposite ? 'grid' : 'none';
+
+      const layerTransformWrap = document.getElementById('layer-transform-wrap');
+      if (layerTransformWrap) layerTransformWrap.style.display = isComposite ? 'block' : 'none';
+
+      const dragBadge = document.getElementById('drag-hint-badge');
+      if (dragBadge) dragBadge.style.display = isComposite ? 'flex' : 'none';
+
+      const pixelFrame = document.getElementById('pixel-frame');
+      if (pixelFrame) pixelFrame.classList.toggle('draggable', isComposite);
+      if (imgPixel) imgPixel.style.cursor = isComposite ? 'grab' : 'zoom-in';
+
+      const dropzoneSingle = document.getElementById('dropzone');
+      if (dropzoneSingle) dropzoneSingle.style.display = isComposite ? 'none' : 'block';
+
+      const dropzoneComp = document.getElementById('composite-dropzone-wrap');
+      if (dropzoneComp) dropzoneComp.style.display = isComposite ? 'grid' : 'none';
+
+      const selectMode = document.getElementById('select-mode');
+      if (selectMode && selectMode.value !== mode) {
+        selectMode.value = mode;
+      }
+    }
+
+    // 处理模式下拉选择监听
+    const selectMode = document.getElementById('select-mode');
+    if (selectMode) {
+      selectMode.addEventListener('change', (e) => {
+        setPipelineMode(e.target.value);
       });
-    });
+    }
 
     // 特效混合模式下拉选择
     const selectBlendMode = document.getElementById('select-blend-mode');
