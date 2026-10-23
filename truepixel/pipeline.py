@@ -52,7 +52,7 @@ def process_image(
     content = ops.crop_to_content(Image.fromarray(arr, "RGBA"))
     box = content_size if content_size else target_size - (2 if apply_outline else 0)
     resized = content.resize(
-        ops.fit_size(content.width, content.height, max(1, min(box, target_size))),
+        ops.fit_size(content.width, content.height, max(1, box)),
         Image.Resampling.LANCZOS,
     )
     if has_alpha:

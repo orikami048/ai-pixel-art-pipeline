@@ -99,8 +99,9 @@ def handle_process(data: dict) -> dict:
             raise ValueError("请提供发光特效图像！" if mode == "vfx" else "请提供实体道具图像！")
         raw_w, raw_h = raw.size
         solid_scale = float(data.get("solid_scale", 100)) / 100.0
-        if solid_scale != 1.0 and solid_scale > 0:
-            solid_kw["content_size"] = max(1, int(round(size * solid_scale)))
+        if solid_scale > 0 and solid_scale != 1.0:
+            base_box = size - (2 if solid_kw.get("apply_outline", True) else 0)
+            solid_kw["content_size"] = max(1, int(round(base_box * solid_scale)))
 
         if mode == "vfx":
             native, prev = process_vfx_image(raw, size, colors, glow_gain=glow)

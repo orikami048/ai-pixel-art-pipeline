@@ -193,6 +193,26 @@ class ServerTest(unittest.TestCase):
         for k in ("native_base64", "preview4x_base64", "raw_width", "raw_height", "actual_colors"):
             self.assertIn(k, res)
 
+    def test_api_process_solid_scale(self):
+        from truepixel.server import handle_process, _b64_to_pil
+
+        # 50% scale
+        res_small = handle_process({"mode": "solid", "image_base64": self._b64(sword_on_white(256)),
+                                    "target_size": 64, "solid_scale": 50})
+        # 100% scale
+        res_normal = handle_process({"mode": "solid", "image_base64": self._b64(sword_on_white(256)),
+                                     "target_size": 64, "solid_scale": 100})
+        
+        img_small = _b64_to_pil(res_small["native_base64"])
+        img_normal = _b64_to_pil(res_normal["native_base64"])
+        bbox_small = img_small.getbbox()
+        bbox_normal = img_normal.getbbox()
+        
+        w_small = bbox_small[2] - bbox_small[0]
+        w_normal = bbox_normal[2] - bbox_normal[0]
+        self.assertLess(w_small, w_normal)
+        self.assertAlmostEqual(w_small / w_normal, 0.5, delta=0.15)
+
     def test_api_process_composite(self):
         from truepixel.server import handle_process
 

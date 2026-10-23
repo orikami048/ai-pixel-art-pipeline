@@ -942,6 +942,16 @@
             <div class="switch-subtext" style="margin-top: 4px;">容差分离默认 100；连通增强默认 120 (可按需微调)</div>
           </div>
 
+          <!-- 原始输入道具图主体缩放 (Solid Scale) -->
+          <div class="form-group" id="solid-scale-wrap" style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="font-size:12px; font-weight:600; color:var(--text-main);">🗡️ 原始道具图主体缩放</span>
+              <strong id="lbl-solid-scale" style="color:var(--accent-cyan);">100%</strong>
+            </div>
+            <input type="range" id="range-solid-scale" min="20" max="250" step="2" value="100" style="margin-top:6px;">
+            <div class="switch-subtext" style="margin-top:4px;">放大或缩小主体尺寸 (20% ~ 250%)，为外围光芒预留空间或撑满画布。</div>
+          </div>
+
           <!-- 1px 描边 -->
           <div class="switch-row">
             <div>
@@ -1019,15 +1029,7 @@
               <button class="capsule-btn" id="btn-reset-offset" style="padding: 2px 8px; font-size: 11px;">全部复位</button>
             </div>
 
-                        <!-- 原始输入道具主体缩放 -->
-            <div style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-size:12px; font-weight:600; color:var(--text-main);">🗡️ 原始道具图主体缩放</span>
-                <strong id="lbl-solid-scale" style="color:var(--accent-cyan);">100%</strong>
-              </div>
-              <input type="range" id="range-solid-scale" min="20" max="250" step="2" value="100" style="margin-top:6px;">
-              <div class="switch-subtext" style="margin-top:4px;">放大或缩小道具图主体尺寸，为外围光芒留出空间或撑满画布。</div>
-            </div>
+            
 
             <!-- 自由拉伸控制卡片 -->
             <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-top: 8px;">
@@ -1480,6 +1482,24 @@
         updateLiveComposite();
       });
     });
+
+    // 原始道具图主体缩放滑块
+    const rangeSolidScale = document.getElementById('range-solid-scale');
+    const lblSolidScale = document.getElementById('lbl-solid-scale');
+    if (rangeSolidScale) {
+      rangeSolidScale.addEventListener('input', (e) => {
+        state.solidScale = parseInt(e.target.value, 10) || 100;
+        if (lblSolidScale) lblSolidScale.innerText = `${state.solidScale}%`;
+        if (state.mode === 'composite') {
+          updateLiveComposite();
+        }
+      });
+      rangeSolidScale.addEventListener('change', () => {
+        if (state.mode === 'solid' && state.currentRawBase64) {
+          reprocessCurrent();
+        }
+      });
+    }
 
     // 特效自由拉伸与缩放滑块
     const rangeScaleX = document.getElementById('range-scale-x');
@@ -2332,6 +2352,7 @@
           blend_mode: state.blendMode,
           offset_x: state.offsetX,
           offset_y: state.offsetY,
+          solid_scale: (state.solidScale !== undefined ? state.solidScale : 100),
           scale_x: (state.scaleX !== undefined ? state.scaleX : 100) / 100,
           scale_y: (state.scaleY !== undefined ? state.scaleY : 100) / 100,
           rotation: state.rotation || 0,
