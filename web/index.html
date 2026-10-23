@@ -268,8 +268,9 @@
     .switch {
       position: relative;
       display: inline-block;
-      width: 44px;
-      height: 24px;
+      width: 36px;
+      height: 20px;
+      flex-shrink: 0;
     }
 
     .switch input {
@@ -283,21 +284,23 @@
       cursor: pointer;
       top: 0; left: 0; right: 0; bottom: 0;
       background-color: #1f2736;
-      border-radius: 24px;
-      transition: .25s;
+      border-radius: 20px;
+      transition: .2s ease;
       border: 1px solid var(--border-color);
+      box-sizing: border-box;
     }
 
     .slider:before {
       position: absolute;
       content: "";
-      height: 16px;
-      width: 16px;
-      left: 3px;
-      bottom: 3px;
-      background-color: white;
+      height: 14px;
+      width: 14px;
+      left: 2px;
+      bottom: 2px;
+      background-color: #fff;
       border-radius: 50%;
-      transition: .25s;
+      transition: .2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
     }
 
     input:checked + .slider {
@@ -306,7 +309,7 @@
     }
 
     input:checked + .slider:before {
-      transform: translateX(20px);
+      transform: translateX(16px);
       background-color: #0c121d;
     }
 
@@ -318,12 +321,21 @@
     }
 
     input[type="color"] {
-      border: none;
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      border: 1px solid var(--border-color);
+      width: 22px;
+      height: 22px;
+      border-radius: 4px;
       cursor: pointer;
       background: transparent;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+    input[type="color"]::-webkit-color-swatch {
+      border: none;
+      border-radius: 3px;
     }
 
     /* 右侧工作区 */
@@ -961,25 +973,49 @@
 
         <!-- 实体专属控制组 (Solid Controls) -->
         <div id="solid-controls-group">
-          <!-- 抠图净化模式 (下拉框) -->
-          <div class="form-group">
-            <div class="form-label">
-              <span>抠图净化模式</span>
-            </div>
+          <!-- 抠图净化模式 (默认生效，界面暂隐藏以精简高度) -->
+          <div class="form-group" style="display:none;" id="mask-mode-group">
             <select class="form-select" id="select-mask-mode">
-              <option value="tolerance" selected>✨ Alpha 容差分离 (保留半透明光晕/断连粒子/序列帧)</option>
-              <option value="single">🎯 单一主体连通增强 (只保留主轮廓/滤除杂碎噪点)</option>
+              <option value="tolerance" selected>Alpha 容差分离</option>
+              <option value="single">单一主体连通增强</option>
             </select>
           </div>
 
           <!-- 原始输入道具图主体缩放 (Solid Scale) -->
-          <div class="form-group" id="solid-scale-wrap" style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 10px; margin-bottom: 10px;">
+          <div class="form-group" id="solid-scale-wrap" style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 10px; margin-bottom: 8px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:12px; font-weight:600; color:var(--text-main);">🗡️ 原始道具图主体缩放</span>
               <strong id="lbl-solid-scale" style="color:var(--accent-cyan);">100%</strong>
             </div>
             <input type="range" id="range-solid-scale" min="20" max="250" step="2" value="100" style="margin-top:5px;">
             <div class="switch-subtext" style="margin-top:3px;">拖拽滑块即时 60FPS 顺滑预览缩放 (20% ~ 250%)</div>
+          </div>
+
+          <!-- 特效图层自由缩放/拉伸 (双图层模式时紧挨着原始图缩放) -->
+          <div id="vfx-scale-wrap" style="display:none; background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 7px 10px; margin-bottom: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+              <span style="font-size:12px; font-weight:600; color:var(--text-main);">✨ 特效图层拉伸/缩放</span>
+              <label style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
+                <input type="checkbox" id="chk-lock-ratio" checked style="cursor:pointer;">
+                <span>等比缩放</span>
+              </label>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+              <div>
+                <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                  <span id="lbl-scale-x-name">宽 / 等比:</span>
+                  <strong id="lbl-scale-x" style="color:var(--accent-cyan);">100%</strong>
+                </div>
+                <input type="range" id="range-scale-x" min="20" max="300" step="2" value="100" style="margin-top:4px;">
+              </div>
+              <div>
+                <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
+                  <span>高度拉伸:</span>
+                  <strong id="lbl-scale-y" style="color:var(--accent-cyan);">100%</strong>
+                </div>
+                <input type="range" id="range-scale-y" min="20" max="300" step="2" value="100" style="margin-top:4px;">
+              </div>
+            </div>
           </div>
 
           <!-- 并排滑块：Alpha 判定阈值 + 杂色孤立微粒过滤 -->
@@ -1003,15 +1039,15 @@
           <!-- 单行紧凑：1px 描边开关 + 描边颜色拾取 -->
           <div style="display:flex; justify-content:space-between; align-items:center; background:#0b101a; border:1px solid var(--border-color); border-radius:6px; padding:6px 10px; margin-bottom: 10px;">
             <div style="display:flex; align-items:center; gap:8px;">
-              <label class="switch" style="width:34px; height:18px;">
+              <label class="switch">
                 <input type="checkbox" id="chk-outline" checked>
-                <span class="slider" style="border-radius:18px;"></span>
+                <span class="slider"></span>
               </label>
               <span style="font-size:12px; font-weight:600; color:var(--text-main);">1px 闭合描边</span>
             </div>
-            <div id="outline-color-group" style="display:flex; align-items:center; gap:6px;">
+            <div id="outline-color-group" style="display:flex; align-items:center; gap:6px; transition:opacity 0.2s;">
               <span style="font-size:11px; color:var(--text-muted);">颜色:</span>
-              <input type="color" id="picker-outline-color" value="#12141a" style="width:22px; height:22px; border:none; padding:0; border-radius:4px; cursor:pointer;">
+              <input type="color" id="picker-outline-color" value="#12141a">
               <strong id="lbl-outline-color" style="font-size:11px; color:var(--accent-cyan); font-family:monospace;">#12141a</strong>
             </div>
           </div>
@@ -1075,34 +1111,7 @@
 
             
 
-            <!-- 自由拉伸控制卡片 -->
-            <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-top: 8px;">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                <span style="font-size:12px; font-weight:600; color:var(--text-main);">⤢ 自由拉伸/缩放 (匹配道具)</span>
-                <label style="font-size:11px; color:var(--text-muted); display:flex; align-items:center; gap:4px; cursor:pointer;">
-                  <input type="checkbox" id="chk-lock-ratio" checked style="cursor:pointer;">
-                  <span>等比缩放</span>
-                </label>
-              </div>
 
-              <!-- 宽度拉伸 + 高度拉伸 并排两列 -->
-              <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 4px;">
-                <div>
-                  <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
-                    <span id="lbl-scale-x-name">宽 / 等比:</span>
-                    <strong id="lbl-scale-x" style="color:var(--accent-cyan);">100%</strong>
-                  </div>
-                  <input type="range" id="range-scale-x" min="20" max="300" step="2" value="100" style="margin-top:4px;">
-                </div>
-                <div>
-                  <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
-                    <span>高度拉伸:</span>
-                    <strong id="lbl-scale-y" style="color:var(--accent-cyan);">100%</strong>
-                  </div>
-                  <input type="range" id="range-scale-y" min="20" max="300" step="2" value="100" style="margin-top:4px;">
-                </div>
-              </div>
-            </div>
 
             <!-- 360° 方向与倾斜轮盘 (专门解决45°斜向飞剑与光刃) -->
             <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-top: 8px;">
@@ -1472,6 +1481,9 @@
       const compMetaRow = document.getElementById('composite-meta-row');
       if (compMetaRow) compMetaRow.style.display = isComposite ? 'grid' : 'none';
 
+      const vfxScaleWrap = document.getElementById('vfx-scale-wrap');
+      if (vfxScaleWrap) vfxScaleWrap.style.display = isComposite ? 'block' : 'none';
+
       const layerTransformWrap = document.getElementById('layer-transform-wrap');
       if (layerTransformWrap) layerTransformWrap.style.display = isComposite ? 'block' : 'none';
 
@@ -1787,7 +1799,11 @@
     // 1px 描边开关
     document.getElementById('chk-outline').addEventListener('change', (e) => {
       state.applyOutline = e.target.checked;
-      document.getElementById('outline-color-group').style.display = state.applyOutline ? 'block' : 'none';
+      const colorGroup = document.getElementById('outline-color-group');
+      if (colorGroup) {
+        colorGroup.style.opacity = state.applyOutline ? '1' : '0.3';
+        colorGroup.style.pointerEvents = state.applyOutline ? 'auto' : 'none';
+      }
       if (state.currentRawBase64 && state.mode === 'solid') {
         debouncedReprocess(50, true);
       }
