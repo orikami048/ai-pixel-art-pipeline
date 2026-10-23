@@ -107,15 +107,57 @@
     .sidebar {
       display: flex;
       flex-direction: column;
-      gap: 20px;
+      gap: 14px;
+      position: sticky;
+      top: 16px;
+      align-self: start;
     }
 
     .panel-card {
       background: var(--bg-card);
       border: 1px solid var(--border-color);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 16px 14px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+    }
+
+    /* 高度紧凑型下拉选择框 */
+    .form-select {
+      width: 100%;
+      background: #0b101a;
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300f0ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 10px center;
+      background-size: 14px;
+      padding-right: 30px;
+      transition: all 0.18s ease;
+    }
+
+    .form-select:hover {
+      border-color: #43536d;
+      color: #fff;
+    }
+
+    .form-select:focus {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 8px rgba(0, 240, 255, 0.35);
+      color: #fff;
+    }
+
+    .form-select option {
+      background: #111622;
+      color: #e0e6ed;
+      padding: 6px 10px;
     }
 
     .panel-title {
@@ -131,7 +173,7 @@
     }
 
     .form-group {
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     .form-group:last-child {
@@ -889,22 +931,22 @@
           </div>
         </div>
 
-        <!-- 2. 分辨率选择 -->
+        <!-- 2. 分辨率选择 (下拉框) -->
         <div class="form-group">
           <div class="form-label">
             <span>目标分辨率</span>
             <span class="value-badge" id="lbl-resolution">96 × 96</span>
           </div>
-          <div class="capsule-group">
-            <button class="capsule-btn" data-size="32">32px</button>
-            <button class="capsule-btn" data-size="48">48px</button>
-            <button class="capsule-btn" data-size="64">64px</button>
-            <button class="capsule-btn active" data-size="96">96px</button>
-            <button class="capsule-btn" data-size="128">128px</button>
-            <button class="capsule-btn" data-size="256">256px</button>
-            <button class="capsule-btn" data-size="512">512px</button>
-            <button class="capsule-btn" data-size="1024">1024px</button>
-          </div>
+          <select class="form-select" id="select-resolution">
+            <option value="32">32 × 32 Px (经典小图标 / 极简像素)</option>
+            <option value="48">48 × 48 Px (复古 RPG 角色 / 装备)</option>
+            <option value="64">64 × 64 Px (标准武器道具)</option>
+            <option value="96" selected>96 × 96 Px (独立游戏主道具 - 默认)</option>
+            <option value="128">128 × 128 Px (高精法宝 / 大精灵)</option>
+            <option value="256">256 × 256 Px (256px 细腻像素图)</option>
+            <option value="512">512 × 512 Px (512px 场景贴图)</option>
+            <option value="1024">1024 × 1024 Px (1024px 巨幅贴图)</option>
+          </select>
         </div>
 
         <!-- 3. 调色板颜色数 -->
@@ -918,18 +960,15 @@
 
         <!-- 实体专属控制组 (Solid Controls) -->
         <div id="solid-controls-group">
-          <!-- 抠图与边缘净化模式选项 -->
-          <div class="form-group" style="margin-bottom: 14px;">
+          <!-- 抠图净化模式 (下拉框) -->
+          <div class="form-group">
             <div class="form-label">
               <span>抠图净化模式</span>
             </div>
-            <div class="capsule-group" style="grid-template-columns: 1fr 1fr; gap: 8px;">
-              <button class="capsule-btn active" data-mask="tolerance" id="btn-mask-tolerance">✨ Alpha 容差分离</button>
-              <button class="capsule-btn" data-mask="single" id="btn-mask-single">🎯 单一主体连通增强</button>
-            </div>
-            <div id="mask-mode-desc" class="switch-subtext" style="margin-top: 6px; line-height: 1.4;">
-              💡 容差模式：保留光晕、多角色序列帧与断连粒子（post_process_mask=False）。
-            </div>
+            <select class="form-select" id="select-mask-mode">
+              <option value="tolerance" selected>✨ Alpha 容差分离 (保留半透明光晕/断连粒子/序列帧)</option>
+              <option value="single">🎯 单一主体连通增强 (只保留主轮廓/滤除杂碎噪点)</option>
+            </select>
           </div>
 
           <!-- Alpha 剔除阈值滑块 -->
@@ -943,13 +982,13 @@
           </div>
 
           <!-- 原始输入道具图主体缩放 (Solid Scale) -->
-          <div class="form-group" id="solid-scale-wrap" style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 14px;">
+          <div class="form-group" id="solid-scale-wrap" style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; margin-bottom: 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <span style="font-size:12px; font-weight:600; color:var(--text-main);">🗡️ 原始道具图主体缩放</span>
               <strong id="lbl-solid-scale" style="color:var(--accent-cyan);">100%</strong>
             </div>
             <input type="range" id="range-solid-scale" min="20" max="250" step="2" value="100" style="margin-top:6px;">
-            <div class="switch-subtext" style="margin-top:4px;">放大或缩小主体尺寸 (20% ~ 250%)，为外围光芒预留空间或撑满画布。</div>
+            <div class="switch-subtext" style="margin-top:4px;">拖拽滑块即时预览缩放 (20% ~ 250%)</div>
           </div>
 
           <!-- 1px 描边 -->
@@ -997,29 +1036,27 @@
             <input type="range" id="range-glow" min="50" max="250" step="5" value="115">
           </div>
 
-          <!-- 混合模式选择 -->
+          <!-- 混合模式选择 (下拉框) -->
           <div class="form-group" id="blend-mode-wrap">
             <div class="form-label">
               <span>特效图层混合模式</span>
-              <span class="value-badge" id="lbl-blend">加色发光 (Additive)</span>
             </div>
-            <div class="capsule-group" style="grid-template-columns: repeat(3, 1fr);">
-              <button class="capsule-btn active" data-blend="additive">加色 (Add)</button>
-              <button class="capsule-btn" data-blend="screen">滤色 (Screen)</button>
-              <button class="capsule-btn" data-blend="normal">正常 (Alpha)</button>
-            </div>
+            <select class="form-select" id="select-blend-mode">
+              <option value="additive" selected>加色发光 (Additive) - 炫酷仙剑/神兵光刃</option>
+              <option value="screen">滤色混合 (Screen) - 柔和背景光晕</option>
+              <option value="normal">正常叠加 (Alpha) - 普通图层覆盖</option>
+            </select>
           </div>
 
-          <!-- 图层上下叠放层级选择 -->
-          <div class="form-group" id="layer-order-wrap" style="display:none; margin-top: 14px;">
+          <!-- 图层上下叠放层级选择 (下拉框) -->
+          <div class="form-group" id="layer-order-wrap" style="display:none; margin-top: 10px;">
             <div class="form-label">
               <span>🔀 图层叠放上下层级</span>
-              <span class="value-badge" id="lbl-layer-order">特效在顶 (前置光效)</span>
             </div>
-            <div class="capsule-group" style="grid-template-columns: 1fr 1fr;">
-              <button class="capsule-btn active" data-order="vfx_on_top">✨ 特效在顶 (覆盖前)</button>
-              <button class="capsule-btn" data-order="solid_on_top">🗡️ 实体在顶 (背景光晕)</button>
-            </div>
+            <select class="form-select" id="select-layer-order">
+              <option value="vfx_on_top" selected>✨ 特效在顶 (光芒覆盖在道具前方)</option>
+              <option value="solid_on_top">🗡️ 实体在顶 (光芒作为背后背景光晕)</option>
+            </select>
           </div>
 
           <!-- 特效自由拉伸与位置偏移微调 -->
@@ -1087,18 +1124,17 @@
               </div>
             </div>
 
-            <!-- 画幅外扩防裁切留白 -->
-            <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-top: 8px;">
+            <!-- 画幅外扩留白 (下拉框) -->
+            <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 8px 10px; margin-top: 8px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-size:12px; font-weight:600; color:var(--text-main);">📐 画幅外扩 (防 45° 剑尖/大特效切边)</span>
-                <span class="value-badge" id="lbl-canvas-padding">+0% 标准</span>
+                <span style="font-size:12px; font-weight:600; color:var(--text-main);">📐 画幅外扩 (防 45° 剑尖切边)</span>
               </div>
-              <div class="capsule-group" style="grid-template-columns: repeat(4, 1fr); gap: 6px;">
-                <button type="button" class="capsule-btn active" data-padding="0">标准 0%</button>
-                <button type="button" class="capsule-btn" data-padding="0.2">+20% 扩展</button>
-                <button type="button" class="capsule-btn" data-padding="0.5">+50% 广角</button>
-                <button type="button" class="capsule-btn" data-padding="1.0">+100% 巨幅</button>
-              </div>
+              <select class="form-select" id="select-canvas-padding">
+                <option value="0" selected>标准画幅 (+0% 标准)</option>
+                <option value="0.2">+20% 扩展 (微量防切边)</option>
+                <option value="0.5">+50% 广角 (45° 斜剑防切边)</option>
+                <option value="1.0">+100% 巨幅 (大范围外溢光芒)</option>
+              </select>
             </div>
 
             <!-- 位置偏移微调 -->
@@ -1452,17 +1488,16 @@
       });
     });
 
-    // 特效混合模式切换
-    document.querySelectorAll('.capsule-btn[data-blend]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.capsule-btn[data-blend]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.blendMode = btn.dataset.blend;
-        const blendNames = { additive: '加色发光 (Additive)', screen: '滤色 (Screen)', normal: '正常 (Alpha)' };
-        document.getElementById('lbl-blend').innerText = blendNames[state.blendMode];
+    // 特效混合模式下拉选择
+    const selectBlendMode = document.getElementById('select-blend-mode');
+    if (selectBlendMode) {
+      selectBlendMode.addEventListener('change', (e) => {
+        state.blendMode = e.target.value;
+        const lblBlend = document.getElementById('lbl-blend');
+        if (lblBlend) lblBlend.innerText = selectBlendMode.options[selectBlendMode.selectedIndex].text;
         updateLiveComposite();
       });
-    });
+    }
 
     // 发光增益滑块
     document.getElementById('range-glow').addEventListener('input', (e) => {
@@ -1471,32 +1506,52 @@
       updateLiveComposite();
     });
 
-    // 图层叠放上下层级切换
-    document.querySelectorAll('.capsule-btn[data-order]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.capsule-btn[data-order]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.layerOrder = btn.dataset.order;
-        const orderNames = { vfx_on_top: '✨ 特效在顶 (前置光效)', solid_on_top: '🗡️ 实体在顶 (背景光晕)' };
-        document.getElementById('lbl-layer-order').innerText = orderNames[state.layerOrder];
+    // 图层叠放上下层级下拉选择
+    const selectLayerOrder = document.getElementById('select-layer-order');
+    if (selectLayerOrder) {
+      selectLayerOrder.addEventListener('change', (e) => {
+        state.layerOrder = e.target.value;
+        const lblOrder = document.getElementById('lbl-layer-order');
+        if (lblOrder) lblOrder.innerText = selectLayerOrder.options[selectLayerOrder.selectedIndex].text;
         updateLiveComposite();
       });
-    });
+    }
 
-    // 原始道具图主体缩放滑块
+    // 全局防抖实时计算函数 (支持静默预览，不遮挡画面)
+    let reprocessTimer = null;
+    function debouncedReprocess(delay = 200, silent = true) {
+      if (reprocessTimer) clearTimeout(reprocessTimer);
+      reprocessTimer = setTimeout(() => {
+        reprocessTimer = null;
+        if (state.currentRawBase64) {
+          reprocessCurrent({ silent });
+        }
+      }, delay);
+    }
+
+    // 原始道具图主体缩放滑块 (拖动时 60FPS 顺滑无延迟实时预览 + 防抖静默重新生成)
     const rangeSolidScale = document.getElementById('range-solid-scale');
     const lblSolidScale = document.getElementById('lbl-solid-scale');
     if (rangeSolidScale) {
       rangeSolidScale.addEventListener('input', (e) => {
-        state.solidScale = parseInt(e.target.value, 10) || 100;
-        if (lblSolidScale) lblSolidScale.innerText = `${state.solidScale}%`;
+        const val = parseInt(e.target.value, 10) || 100;
+        state.solidScale = val;
+        if (lblSolidScale) lblSolidScale.innerText = `${val}%`;
+
         if (state.mode === 'composite') {
           updateLiveComposite();
+        } else if (state.mode === 'solid') {
+          // 实时 60FPS 顺滑预览缩放
+          if (imgPixel && imgPixel.src) {
+            imgPixel.style.transform = `scale(${val / 100})`;
+            imgPixel.style.transformOrigin = 'center center';
+          }
+          debouncedReprocess(200, true);
         }
       });
       rangeSolidScale.addEventListener('change', () => {
         if (state.mode === 'solid' && state.currentRawBase64) {
-          reprocessCurrent();
+          debouncedReprocess(0, true);
         }
       });
     }
@@ -1623,19 +1678,17 @@
       });
     }
 
-    // 画幅外扩留白切换
-    document.querySelectorAll('.capsule-btn[data-padding]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.capsule-btn[data-padding]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.canvasPadding = parseFloat(btn.dataset.padding) || 0.0;
-        const padText = { '0': '+0% 标准', '0.2': '+20% 扩展', '0.5': '+50% 广角', '1': '+100% 巨幅', '1.0': '+100% 巨幅' };
+    // 画幅外扩留白下拉选择
+    const selectCanvasPadding = document.getElementById('select-canvas-padding');
+    if (selectCanvasPadding) {
+      selectCanvasPadding.addEventListener('change', (e) => {
+        state.canvasPadding = parseFloat(e.target.value) || 0.0;
         const lblPad = document.getElementById('lbl-canvas-padding');
-        if (lblPad) lblPad.innerText = padText[btn.dataset.padding] || '+0%';
+        if (lblPad) lblPad.innerText = selectCanvasPadding.options[selectCanvasPadding.selectedIndex].text;
         updateOffsetRange();
         updateLiveComposite();
       });
-    });
+    }
 
     document.getElementById('btn-reset-offset').addEventListener('click', () => {
       state.offsetX = 0;
@@ -1649,9 +1702,11 @@
       state.scaleY = 100;
       setRotationAngle(0);
       state.canvasPadding = 0.0;
-      document.querySelectorAll('.capsule-btn[data-padding]').forEach(b => b.classList.toggle('active', b.dataset.padding === '0'));
+      const selectCanvasPaddingReset = document.getElementById('select-canvas-padding');
+      if (selectCanvasPaddingReset) selectCanvasPaddingReset.value = '0';
       const lblPad = document.getElementById('lbl-canvas-padding');
       if (lblPad) lblPad.innerText = '+0% 标准';
+      if (imgPixel) imgPixel.style.transform = 'none';
       document.getElementById('range-offset-x').value = 0;
       document.getElementById('range-offset-y').value = 0;
       if (rangeScaleX) rangeScaleX.value = 100;
@@ -1663,63 +1718,83 @@
       updateLiveComposite();
     });
 
-    // 初始化控制项监听
-    document.querySelectorAll('.capsule-btn[data-size]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.capsule-btn[data-size]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.targetSize = parseInt(btn.dataset.size);
+    // 目标分辨率下拉选择
+    const selectResolution = document.getElementById('select-resolution');
+    if (selectResolution) {
+      selectResolution.addEventListener('change', (e) => {
+        state.targetSize = parseInt(e.target.value) || 96;
         document.getElementById('lbl-resolution').innerText = `${state.targetSize} × ${state.targetSize}`;
         updateOffsetRange();
         applyZoom();
+        if (state.currentRawBase64 && state.mode === 'solid') {
+          debouncedReprocess(50, true);
+        }
       });
-    });
+    }
 
+    // 调色板颜色数滑块 (拖拽实时静默重新生成预览)
     document.getElementById('range-colors').addEventListener('input', (e) => {
       state.colorCount = parseInt(e.target.value);
       document.getElementById('lbl-colors').innerText = `${state.colorCount} 色`;
+      if (state.mode === 'solid' && state.currentRawBase64) {
+        debouncedReprocess(250, true);
+      }
     });
 
-    document.querySelectorAll('.capsule-btn[data-mask]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.capsule-btn[data-mask]').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.maskMode = btn.dataset.mask;
-        const lblMM = document.getElementById('lbl-mask-mode');
+    // 抠图净化模式下拉选择
+    const selectMaskMode = document.getElementById('select-mask-mode');
+    if (selectMaskMode) {
+      selectMaskMode.addEventListener('change', (e) => {
+        state.maskMode = e.target.value;
         if (state.maskMode === 'single') {
           state.postProcessMask = true;
           state.alphaThreshold = 120;
-          if (lblMM) lblMM.innerText = '连通增强 (alpha≥120)';
-          document.getElementById('mask-mode-desc').innerText = '🎯 连通增强：post_process_mask=True（强制寻找最大单一连通块并形态学腐蚀，alpha≥120），适合单体武器/道具。';
         } else {
           state.postProcessMask = false;
           state.alphaThreshold = 100;
-          if (lblMM) lblMM.innerText = 'Alpha 容差分离';
-          document.getElementById('mask-mode-desc').innerText = '💡 容差模式：保留半透明光晕、多角色序列帧与断连粒子（post_process_mask=False），避免断裂误切。';
         }
         document.getElementById('range-alpha-thresh').value = state.alphaThreshold;
         document.getElementById('lbl-alpha-thresh').innerText = `≥ ${state.alphaThreshold}`;
+        if (state.currentRawBase64 && state.mode === 'solid') {
+          debouncedReprocess(50, true);
+        }
       });
-    });
+    }
 
+    // Alpha 阈值滑块 (拖拽实时静默重新生成预览)
     document.getElementById('range-alpha-thresh').addEventListener('input', (e) => {
       state.alphaThreshold = parseInt(e.target.value);
       document.getElementById('lbl-alpha-thresh').innerText = `≥ ${state.alphaThreshold}`;
+      if (state.mode === 'solid' && state.currentRawBase64) {
+        debouncedReprocess(250, true);
+      }
     });
 
+    // 1px 描边开关
     document.getElementById('chk-outline').addEventListener('change', (e) => {
       state.applyOutline = e.target.checked;
       document.getElementById('outline-color-group').style.display = state.applyOutline ? 'block' : 'none';
+      if (state.currentRawBase64 && state.mode === 'solid') {
+        debouncedReprocess(50, true);
+      }
     });
 
+    // 描边颜色选择器
     document.getElementById('picker-outline-color').addEventListener('change', (e) => {
       state.outlineColor = e.target.value;
       document.getElementById('lbl-outline-color').innerText = state.outlineColor;
+      if (state.currentRawBase64 && state.mode === 'solid') {
+        debouncedReprocess(50, true);
+      }
     });
 
+    // 噪点过滤滑块 (拖拽实时静默重新生成预览)
     document.getElementById('range-noise').addEventListener('input', (e) => {
       state.noiseArea = parseInt(e.target.value);
       document.getElementById('lbl-noise').innerText = `${state.noiseArea} px`;
+      if (state.mode === 'solid' && state.currentRawBase64) {
+        debouncedReprocess(250, true);
+      }
     });
 
     // 点击【开始生成】按钮执行处理
@@ -2252,20 +2327,26 @@
       loadingOverlay.classList.remove('active');
     }
 
-    async function processSingle(fileName, base64) {
+    async function processSingle(fileName, base64, options = {}) {
+      const isSilent = Boolean(options && options.silent);
       state.currentRawBase64 = base64;
       if (state.mode !== 'composite' && base64) {
         imgOriginal.src = base64;
       }
       document.getElementById('item-title-meta').innerText = `• ${fileName}`;
 
-      loadingOverlay.classList.add('active');
-      if (state.mode === 'composite') {
-        loadingText.innerText = 'AI 正在分别提取实体描边与无损发光剑气，并进行加色发光混合...';
-      } else if (state.mode === 'vfx') {
-        loadingText.innerText = 'AI 正在执行纯黑底亮度-透明度分离，保留 100% 细微电弧...';
+      if (!isSilent) {
+        loadingOverlay.classList.add('active');
+        if (state.mode === 'composite') {
+          loadingText.innerText = 'AI 正在分别提取实体描边与无损发光剑气，并进行加色发光混合...';
+        } else if (state.mode === 'vfx') {
+          loadingText.innerText = 'AI 正在执行纯黑底亮度-透明度分离，保留 100% 细微电弧...';
+        } else {
+          loadingText.innerText = 'AI 正在深度去除背景并生成真像素调色板...';
+        }
       } else {
-        loadingText.innerText = 'AI 正在深度去除背景并生成真像素调色板...';
+        const statusBadge = document.getElementById('log-status-badge');
+        if (statusBadge) statusBadge.innerText = '(实时预览计算中...)';
       }
 
       addLog('info', `📡 发起服务端转换: [${fileName}], 模式=${state.mode}, 目标=${state.targetSize}px, 调色板=${state.colorCount}色`);
@@ -2300,16 +2381,22 @@
         document.getElementById('meta-colors').innerText = `${res.actual_colors || state.colorCount} 色`;
         document.getElementById('meta-outline').innerText = state.mode === 'vfx' ? '无 (发光专用)' : (state.applyOutline ? '已生成 1px 闭合' : '无');
 
+        if (imgPixel) imgPixel.style.transform = 'none';
         addLog('success', `✅ 转换成功！耗时 ${duration}ms, 成品 ${res.target_size}×${res.target_size} Px, 调色板 ${res.actual_colors || state.colorCount} 色`);
       } catch (err) {
         addLog('error', `❌ 转换接口返回错误: ${err.message}`);
-        alert('转换失败: ' + err.message);
+        if (!isSilent) alert('转换失败: ' + err.message);
       } finally {
-        loadingOverlay.classList.remove('active');
+        if (!isSilent) {
+          loadingOverlay.classList.remove('active');
+        } else {
+          const statusBadge = document.getElementById('log-status-badge');
+          if (statusBadge) statusBadge.innerText = '(就绪)';
+        }
       }
     }
 
-    function reprocessCurrent() {
+    function reprocessCurrent(options = {}) {
       if (state.mode === 'composite') {
         if (!state.layer1Base64 || !state.layer2Base64) {
           addLog('warn', '双层合体模式需要同时载入图层 1 (实体道具) 与图层 2 (发光特效)');
@@ -2317,7 +2404,7 @@
           return;
         }
         addLog('info', '应用新参数重新计算双层合体...');
-        processSingle('飞剑+剑气双层发光合体', state.layer1Base64);
+        processSingle('飞剑+剑气双层发光合体', state.layer1Base64, options);
         return;
       }
       if (state.currentRawBase64) {
@@ -2326,8 +2413,10 @@
           .replace(/\s*\(已就绪.*?\)/g, '')
           .replace(/\s*\(已载入.*?\)/g, '')
           .trim() || 'image.png';
-        addLog('info', `应用新参数开始生成像素图: [${cleanName}]...`);
-        processSingle(cleanName, state.currentRawBase64);
+        if (!options.silent) {
+          addLog('info', `应用新参数开始生成像素图: [${cleanName}]...`);
+        }
+        processSingle(cleanName, state.currentRawBase64, options);
       }
     }
 
