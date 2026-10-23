@@ -1019,6 +1019,16 @@
               <button class="capsule-btn" id="btn-reset-offset" style="padding: 2px 8px; font-size: 11px;">全部复位</button>
             </div>
 
+                        <!-- 原始输入道具主体缩放 -->
+            <div style="background: #0b101a; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-bottom: 8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-size:12px; font-weight:600; color:var(--text-main);">🗡️ 原始道具图主体缩放</span>
+                <strong id="lbl-solid-scale" style="color:var(--accent-cyan);">100%</strong>
+              </div>
+              <input type="range" id="range-solid-scale" min="20" max="250" step="2" value="100" style="margin-top:6px;">
+              <div class="switch-subtext" style="margin-top:4px;">放大或缩小道具图主体尺寸，为外围光芒留出空间或撑满画布。</div>
+            </div>
+
             <!-- 自由拉伸控制卡片 -->
             <div style="background: #090d15; border: 1px solid var(--border-color); border-radius: 6px; padding: 10px; margin-top: 8px;">
               <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -1334,6 +1344,7 @@
       noiseArea: 18,
       glowGain: 115,
       blendMode: 'additive',
+      solidScale: 100,
       offsetX: 0,
       offsetY: 0,
       scaleX: 100,
@@ -1609,6 +1620,11 @@
     document.getElementById('btn-reset-offset').addEventListener('click', () => {
       state.offsetX = 0;
       state.offsetY = 0;
+      state.solidScale = 100;
+      const rangeSolidScale = document.getElementById('range-solid-scale');
+      if (rangeSolidScale) rangeSolidScale.value = 100;
+      const lblSolidScale = document.getElementById('lbl-solid-scale');
+      if (lblSolidScale) lblSolidScale.innerText = '100%';
       state.scaleX = 100;
       state.scaleY = 100;
       setRotationAngle(0);
@@ -2500,7 +2516,12 @@
 
       function drawSolid() {
         ctx.globalCompositeOperation = 'source-over';
-        ctx.drawImage(state.compositeLayer1Img, padPx, padPx, size, size);
+        const solidScale = (state.solidScale !== undefined ? state.solidScale : 100) / 100.0;
+        const drawW = Math.round(size * solidScale);
+        const drawH = Math.round(size * solidScale);
+        const drawX = padPx + Math.round((size - drawW) / 2);
+        const drawY = padPx + Math.round((size - drawH) / 2);
+        ctx.drawImage(state.compositeLayer1Img, drawX, drawY, drawW, drawH);
       }
 
       function drawVfx() {

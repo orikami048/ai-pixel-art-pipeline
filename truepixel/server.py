@@ -79,6 +79,7 @@ def handle_process(data: dict) -> dict:
             l1 = l2 = single
         solid, _ = process_image(l1, **solid_kw)
         vfx, _ = process_vfx_image(l2, size, colors, glow_gain=glow)
+        solid_scale = float(data.get("solid_scale", 100)) / 100.0
         native = composite_layers(
             solid, vfx, glow_intensity=glow,
             blend_mode=str(data.get("blend_mode", "additive")),
@@ -87,6 +88,7 @@ def handle_process(data: dict) -> dict:
             rotation=float(data.get("rotation", 0.0)),
             canvas_padding=float(data.get("canvas_padding", 0.0)),
             layer_order=str(data.get("layer_order", "vfx_on_top")),
+            solid_scale=solid_scale,
         )
         prev = ops.preview(native)
         raw_w, raw_h = l1.size
@@ -96,6 +98,10 @@ def handle_process(data: dict) -> dict:
         if raw is None:
             raise ValueError("请提供发光特效图像！" if mode == "vfx" else "请提供实体道具图像！")
         raw_w, raw_h = raw.size
+        solid_scale = float(data.get("solid_scale", 100)) / 100.0
+        if solid_scale != 1.0 and solid_scale > 0:
+            solid_kw["content_size"] = max(1, int(round(size * solid_scale)))
+
         if mode == "vfx":
             native, prev = process_vfx_image(raw, size, colors, glow_gain=glow)
         elif mode == "hd":

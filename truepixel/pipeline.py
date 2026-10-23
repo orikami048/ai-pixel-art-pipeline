@@ -140,6 +140,7 @@ def composite_layers(
     rotation: float = 0.0,
     canvas_padding: float = 0.0,
     layer_order: str = "vfx_on_top",
+    solid_scale: float = 1.0,
 ) -> Image.Image:
     """
     图层 1（实体）+ 图层 2（发光特效）合成。
@@ -148,6 +149,13 @@ def composite_layers(
     """
     solid_img = solid_img.convert("RGBA")
     tw, th = solid_img.size
+    if solid_scale != 1.0 and solid_scale > 0:
+        new_w = max(1, int(round(tw * solid_scale)))
+        new_h = max(1, int(round(th * solid_scale)))
+        resized_solid = solid_img.resize((new_w, new_h), Image.Resampling.BILINEAR)
+        scaled_canvas = Image.new("RGBA", (tw, th), (0, 0, 0, 0))
+        scaled_canvas.paste(resized_solid, ((tw - new_w) // 2, (th - new_h) // 2), resized_solid)
+        solid_img = scaled_canvas
     pad = int(round(tw * canvas_padding / 2)) if canvas_padding > 0 else 0
     if pad > 0:
         bigger = Image.new("RGBA", (tw + 2 * pad, th + 2 * pad), (0, 0, 0, 0))
