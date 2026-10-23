@@ -263,7 +263,7 @@ class NativeResult:
     boxes: List[Tuple[int, int, int, int]]  # 每个物体在原图里的位置 (x0, y0, x1, y1)
     sheet: Image.Image                      # 所有物体按原图相对位置拼在一起的原生分辨率总图
     scale: float                            # 检测到的色块边长（原图几个像素 = 1 个真像素）
-    confidence: float                       # 网格吻合度 0~1，< 0.3 视为没有伪像素网格（scale 置 1）
+    confidence: float                       # 网格吻合度 0~1，< 0.25 视为没有伪像素网格（scale 置 1）
     background: str                         # 用了哪种去背景：magenta / green / flat / rembg / none
 
 
@@ -307,6 +307,7 @@ def process_native(
     outline_color: Color = DEFAULT_OUTLINE,
     min_part: int = 4,
     group_gap: Optional[int] = None,
+    peel: int = 0,
 ) -> NativeResult:
     """
     AI 伪像素原图 → 原生分辨率真像素，可自动拆成多个物体。不缩放到固定正方形，适合 UI 面板、
@@ -318,6 +319,8 @@ def process_native(
     min_part：小于 min_part×min_part 个真像素的碎块当飞屑丢掉。
     group_gap：两个碎块相距小于这么多原图像素就算同一个物体（默认 2 个色块）。
     apply_outline：AI 原图一般自带描边，默认不再加。
+    peel：还原后把剪影最外圈剥掉几圈真像素。原图带实心外发光/光晕带时用（一般 3~5），
+          剥完会顺手去掉残留碎块。治标不治本：出图时就不要画发光。
     """
     import cv2
     from . import grid
@@ -332,7 +335,7 @@ def process_native(
     else:
         s, _ = grid.detect_scale(arr)
         conf = grid.grid_fit(arr, s)
-        if conf < 0.3:  # 边缘没有落在网格线上：当作已经是原生像素
+        if conf < 0.25:  # 边缘没有落在网格线上：当作已经是原生像素
             s = 1.0
 
     solid = arr[:, :, 3] > 0
@@ -361,6 +364,8 @@ def process_native(
             mine[y0:y1, x0:x1] = True
             crop[~mine[cy0:cy1, cx0:cx1], 3] = 0
         native, _, _ = grid.to_native(crop, s)
+        if peel > 0:
+            native = ops.remove_specks(ops.peel(native, peel), min_part * min_part)
         if color_count or palette is not None:
             native = ops.quantize_opaque(native, color_count, palette)
         if apply_outline and has_alpha:

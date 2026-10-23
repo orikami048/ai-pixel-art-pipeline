@@ -286,6 +286,21 @@ class NativeTest(unittest.TestCase):
             diff = np.abs(out[:, :, :3].astype(int) - native[:, :, :3].astype(int)).max()
             self.assertLessEqual(diff, 20, f"scale={scale}")  # 模糊会让孤立的亮点略暗
 
+    def test_small_blocks_detected(self):
+        native = tiny_panel(48, 20)
+        for scale, blur in ((3.0, 0.8), (3.5, 0.5)):
+            src = fake_pixel_art(native, scale, blur=blur, canvas=(int(48 * scale) + 120, int(20 * scale) + 120), at=(60, 60))
+            res = process_native(src, color_count=0)
+            self.assertAlmostEqual(res.scale, scale, delta=0.1, msg=f"scale={scale}")
+            self.assertEqual(res.parts[0].size, (48, 20), f"scale={scale}")
+
+    def test_peel_strips_solid_halo(self):
+        native = np.zeros((18, 32, 4), np.uint8)
+        native[:, :] = (40, 200, 190, 255)        # 一圈 3px 的实心"外发光"
+        native[3:-3, 3:-3] = tiny_panel(26, 12)
+        res = process_native(fake_pixel_art(native, 6.0), color_count=0, peel=3)
+        self.assertEqual(res.parts[0].size, (26, 12))
+
     def test_splits_objects_in_reading_order(self):
         a, b = tiny_panel(24, 10), tiny_panel(12, 12)
         src = fake_pixel_art(a, 6.0, canvas=(700, 400), at=(40, 40))

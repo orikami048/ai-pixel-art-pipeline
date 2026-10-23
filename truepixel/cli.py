@@ -118,7 +118,7 @@ def cmd_native(a) -> None:
         Image.open(a.input), pixel_size=a.pixel_size, color_count=a.colors,
         palette=ops.load_palette(a.palette) if a.palette else None,
         background=a.bg, split=not a.no_split, apply_outline=a.outline,
-        outline_color=ops.parse_hex_color(a.outline_color), min_part=a.min_part,
+        outline_color=ops.parse_hex_color(a.outline_color), min_part=a.min_part, peel=a.peel,
     )
     name = a.name or os.path.splitext(os.path.basename(a.input))[0]
     grid_note = f"色块 {res.scale:.2f}px，吻合度 {res.confidence:.2f}" if res.scale > 1 else f"未检测到伪像素网格（吻合度 {res.confidence:.2f}），按原生像素处理"
@@ -214,6 +214,7 @@ def build_parser() -> argparse.ArgumentParser:
     nv.add_argument("--outline", action="store_true", help="另加 1px 描边（AI 原图通常自带）")
     nv.add_argument("--outline-color", default="#12141a")
     nv.add_argument("--min-part", type=int, default=4, help="小于 N×N 真像素的碎块丢掉")
+    nv.add_argument("--peel", type=int, default=0, help="剥掉剪影外圈 N 个真像素（去实心外发光，一般 3~5）")
     nv.add_argument("--preview", type=int, metavar="N", help="另存放大 N 倍预览到 _preview/")
     nv.set_defaults(func=cmd_native)
 

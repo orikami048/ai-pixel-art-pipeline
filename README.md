@@ -51,6 +51,7 @@ python -m truepixel single 剑气.png aura.png --vfx --size 96
 # UI 面板 / 一张图多个物体：按原生像素还原，不缩放成正方形，自动拆分
 python -m truepixel native ui_panels.png 输出目录 --preview 4          # 自动检测色块大小
 python -m truepixel native ui_panels.png 输出目录 --pixel-size 5 --palette palette.png
+python -m truepixel native glow_panel.png 输出目录 --peel 4                # 剥掉画成实心的外发光
 
 # 按素材清单批量处理（见下文）
 python -m truepixel batch asset_list.json

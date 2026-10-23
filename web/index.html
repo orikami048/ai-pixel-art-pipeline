@@ -945,7 +945,7 @@
             </select>
           </div>
 
-          <div class="form-group" style="margin-bottom:0;">
+          <div class="form-group" style="margin-bottom:0;" id="resolution-group">
             <div class="form-label">
               <span>目标分辨率</span>
               <span class="value-badge" id="lbl-resolution">96 × 96</span>
@@ -1051,6 +1051,34 @@
               <input type="color" id="picker-outline-color" value="#12141a">
               <strong id="lbl-outline-color" style="font-size:11px; color:var(--accent-cyan); font-family:monospace;">#12141a</strong>
             </div>
+          </div>
+        </div>
+
+        <!-- 原生还原专属控制组 (Native Controls) -->
+        <div id="native-controls-group" style="display:none;">
+          <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px;">
+            <div class="form-group" style="margin-bottom:0;">
+              <div class="form-label">
+                <span>色块大小</span>
+                <span class="value-badge" id="lbl-pixel-size">自动</span>
+              </div>
+              <input type="number" class="form-select" id="input-pixel-size" min="0" max="64" step="0.1" value="0" title="原图里一个像素的边长，0 = 自动检测">
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <div class="form-label">
+                <span>剥掉外发光</span>
+                <span class="value-badge" id="lbl-peel">0 圈</span>
+              </div>
+              <input type="range" id="range-peel" min="0" max="8" step="1" value="0" title="剥掉剪影外圈 N 个像素，去掉画成实心的外发光/光晕">
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px; background:#0b101a; border:1px solid var(--border-color); border-radius:6px; padding:6px 10px; margin-bottom: 10px;">
+            <label class="switch">
+              <input type="checkbox" id="chk-native-outline">
+              <span class="slider"></span>
+            </label>
+            <span style="font-size:12px; font-weight:600; color:var(--text-main);">另加 1px 描边</span>
+            <span style="font-size:11px; color:var(--text-muted);">(AI 原图一般自带，默认关)</span>
           </div>
         </div>
 
@@ -1333,26 +1361,26 @@
           <!-- 规范 1 -->
           <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size: 14px; font-weight: 700; color: var(--accent-cyan);">1. 常规实体道具 / 角色 (Solid Sprite)</span>
-              <span style="font-size: 11px; background: #1a2233; color: #8ba2c4; padding: 2px 8px; border-radius: 4px;">推荐底色: 中性暗灰底 (#1a1e28)</span>
+              <span style="font-size: 14px; font-weight: 700; color: var(--accent-cyan);">1. 实体道具 / 角色 (Solid Sprite)</span>
+              <span style="font-size: 11px; background: #2a1030; color: #ff9cf5; padding: 2px 8px; border-radius: 4px;">推荐底色: 纯品红 (#FF00FF)</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">适用于金属武器、金甲、药水、宝箱及正常服饰角色。RGB 色彩均衡不偏色，最利于抓取 1px 深黑轮廓线。</p>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">道具、装备、角色都用品红底，会自动走色键抠图。主体有紫/粉色时把 magenta #FF00FF 换成 green #00FF00。不要把 glow、shadow 等词直接写进提示词，要写成否定句。</p>
             <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
-              16-bit retro pixel art game sprite of [道具名称], isolated on neutral dark grey background, clean solid 1px dark pixel outline, high contrast vibrant retro RPG item, crisp pixelated edges
-              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art game sprite of [ITEM_NAME], isolated on neutral dark grey background, clean solid 1px dark pixel outline, high contrast vibrant retro RPG item, crisp pixelated edges" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
+              Pixel art game asset: [ITEM_NAME], chunky visible square pixels on a strict grid, about 64 art-pixels wide, hard edges, continuous 1px dark outline, flat color shading, single object centered with wide margin. The entire background is one flat uniform solid magenta color #FF00FF. Do not add any glow, aura, drop shadow or effect outside the outline. No anti-aliasing, no text.
+              <button class="capsule-btn btn-copy-prompt" data-text="Pixel art game asset: [ITEM_NAME], chunky visible square pixels on a strict grid, about 64 art-pixels wide, hard edges, continuous 1px dark outline, flat color shading, single object centered with wide margin. The entire background is one flat uniform solid magenta color #FF00FF. Do not add any glow, aura, drop shadow or effect outside the outline. No anti-aliasing, no text." style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
             </div>
           </div>
 
           <!-- 规范 2 -->
           <div style="background: #0f141f; border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 18px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size: 14px; font-weight: 700; color: #ffb86c;">2. 深色系实体装备 / 暗影人物 (Dark Sprite)</span>
-              <span style="font-size: 11px; background: #262118; color: #ffd899; padding: 2px 8px; border-radius: 4px;">推荐底色: 中性浅灰底 (#e0e4ec)</span>
+              <span style="font-size: 14px; font-weight: 700; color: #ffb86c;">2. UI 面板 / 按钮 / 九宫格边框 (Native)</span>
+              <span style="font-size: 11px; background: #2a1030; color: #ff9cf5; padding: 2px 8px; border-radius: 4px;">推荐底色: 纯品红 (#FF00FF)</span>
             </div>
-            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">适用于黑衣刺客、黑曜石重剑、死灵黑袍。浅色底可避免深色披风与黑发“融底”，确保轮廓清晰。</p>
+            <p style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px;">用「🧩 原生还原」模式处理：不缩放成正方形，自动拆分多个物体。只生成常态，发光/悬停在引擎里用 modulate 或 shader 做。</p>
             <div style="background: #080b11; padding: 10px 12px; border-radius: 6px; font-family: monospace; font-size: 11px; color: #b8c7db; position: relative;">
-              16-bit retro pixel art game sprite of [深色道具], isolated on clean light grey background, dark obsidian material, sharp crisp pixel silhouette
-              <button class="capsule-btn btn-copy-prompt" data-text="16-bit retro pixel art game sprite of [DARK_ITEM_NAME], isolated on clean light grey background, dark obsidian material, sharp crisp pixel silhouette" style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
+              Pixel art game UI panel frame, ONE single empty rectangular plaque, perfectly symmetrical, orthographic front view, aspect ratio about 3:1, about 160 art-pixels wide. Ornaments ONLY in the four corners, straight plain uniform edges between them, flat plain center. Chunky square pixels, hard edges, 1px dark outline. The entire background is one flat uniform solid magenta color #FF00FF. Do not add any glow, aura, drop shadow or effect outside the frame. No text.
+              <button class="capsule-btn btn-copy-prompt" data-text="Pixel art game UI panel frame, ONE single empty rectangular plaque, perfectly symmetrical, orthographic front view, aspect ratio about 3:1, about 160 art-pixels wide. Ornaments ONLY in the four corners, straight plain uniform edges between them, flat plain center. Chunky square pixels, hard edges, 1px dark outline. The entire background is one flat uniform solid magenta color #FF00FF. Do not add any glow, aura, drop shadow or effect outside the frame. No text." style="position: absolute; right: 8px; top: 8px; padding: 2px 8px; font-size: 10px;">📋 复制</button>
             </div>
           </div>
 
@@ -1376,7 +1404,10 @@
   <script>
     // 全局状态
     const state = {
-      mode: 'solid', // 'solid' | 'vfx' | 'composite'
+      mode: 'solid', // 'solid' | 'vfx' | 'composite' | 'native'
+      pixelSize: 0, // 原生还原：0 = 自动检测
+      peel: 0,
+      nativeOutline: false,
       targetSize: 96,
       colorCount: 32,
       removeBg: true,
@@ -1466,6 +1497,27 @@
     }
 
     // 核心函数：处理模式切换
+    // 原生还原控件：改了就重新处理当前图
+    (function bindNativeControls() {
+      const rerun = () => { if (state.mode === 'native' && state.currentRawBase64) reprocessCurrent({ silent: true }); };
+      const px = document.getElementById('input-pixel-size');
+      if (px) px.addEventListener('change', (e) => {
+        state.pixelSize = Math.max(0, parseFloat(e.target.value) || 0);
+        document.getElementById('lbl-pixel-size').innerText = state.pixelSize > 0 ? `${state.pixelSize} px` : '自动';
+        rerun();
+      });
+      const peel = document.getElementById('range-peel');
+      if (peel) {
+        peel.addEventListener('input', (e) => {
+          state.peel = parseInt(e.target.value) || 0;
+          document.getElementById('lbl-peel').innerText = `${state.peel} 圈`;
+        });
+        peel.addEventListener('change', rerun);
+      }
+      const ol = document.getElementById('chk-native-outline');
+      if (ol) ol.addEventListener('change', (e) => { state.nativeOutline = e.target.checked; rerun(); });
+    })();
+
     function setPipelineMode(mode) {
       state.mode = mode;
 
@@ -1474,7 +1526,12 @@
       const isComposite = state.mode === 'composite';
 
       const solidGroup = document.getElementById('solid-controls-group');
-      if (solidGroup) solidGroup.style.display = isVfx ? 'none' : 'block';
+      const isNative = state.mode === 'native';
+      if (solidGroup) solidGroup.style.display = (isVfx || isNative) ? 'none' : 'block';
+      const nativeGroup = document.getElementById('native-controls-group');
+      if (nativeGroup) nativeGroup.style.display = isNative ? 'block' : 'none';
+      const resolutionGroup = document.getElementById('resolution-group');
+      if (resolutionGroup) resolutionGroup.style.visibility = isNative ? 'hidden' : 'visible';
 
       const vfxGroup = document.getElementById('vfx-controls-group');
       if (vfxGroup) vfxGroup.style.display = (isVfx || isComposite) ? 'block' : 'none';
@@ -2413,7 +2470,9 @@
           : `${res.target_size} × ${res.target_size} Px`;
         document.getElementById('meta-time').innerText = `${duration} ms`;
         document.getElementById('meta-colors').innerText = `${res.actual_colors || state.colorCount} 色`;
-        document.getElementById('meta-outline').innerText = state.mode === 'vfx' ? '无 (发光专用)' : (state.applyOutline ? '已生成 1px 闭合' : '无');
+        document.getElementById('meta-outline').innerText = state.mode === 'vfx' ? '无 (发光专用)'
+          : state.mode === 'native' ? (state.nativeOutline ? '已生成 1px 闭合' : '无 (保留原图描边)')
+          : (state.applyOutline ? '已生成 1px 闭合' : '无');
 
         if (imgPixel) imgPixel.style.transform = 'none';
         if (res.parts_base64) {
@@ -2484,7 +2543,10 @@
           scale_y: (state.scaleY !== undefined ? state.scaleY : 100) / 100,
           rotation: state.rotation || 0,
           canvas_padding: state.canvasPadding || 0,
-          layer_order: state.layerOrder
+          layer_order: state.layerOrder,
+          pixel_size: state.mode === 'native' ? state.pixelSize : 0,
+          peel: state.peel,
+          native_outline: state.nativeOutline
         })
       });
       if (!resp.ok) {

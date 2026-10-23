@@ -55,18 +55,22 @@ def estimate_period(profile: np.ndarray, min_s: float = 2.0, max_s: Optional[flo
     # 周期的整数倍也会出峰，取第一个够高的峰
     k = next(k for k in peaks if ac[k] >= 0.6 * best)
 
-    # 用后面几个倍数峰来精确到小数：s ≈ 第 m 个峰的位置 / m
-    est = [float(k)]
-    for m in range(2, 9):
-        c = int(round(k * m))
-        if c + 2 > max_lag:
-            break
-        w = range(max(lo, c - max(1, k // 3)), min(max_lag, c + max(1, k // 3)) + 1)
-        j = max(w, key=lambda t: ac[t])
-        y0, y1, y2 = ac[j - 1], ac[j], ac[j + 1]
-        off = 0.5 * (y0 - y2) / (y0 - 2 * y1 + y2) if (y0 - 2 * y1 + y2) != 0 else 0.0
-        est.append((j + float(np.clip(off, -0.5, 0.5))) / m)
-    return float(np.median(est)), float(np.clip(ac[k], 0.0, 1.0))
+    # 用后面的倍数峰把周期精确到小数：s ≈ 第 m 个峰的位置 / m。
+    # 每找到一个峰就更新估计，下一个倍数按新估计去找，否则小数周期（如 3.5）会越找越偏。
+    # 整数峰 k 只是粗估（周期 3.5 时峰会落在 3 或 4）。在 k 附近按 0.01 扫小数周期，
+    # 每个候选 s 的得分 = 自相关在 s、2s、3s… 处（线性插值）的平均值：所有倍数一起投票，
+    # 一个纹理造成的假峰带不偏结果。
+    cands = np.arange(max(float(lo) - 0.5, k - 1.0), k + 1.0 + 1e-9, 0.01)
+    cands = cands[cands >= 1.5]
+    best_s, best_score = float(k), -np.inf
+    for s in cands:
+        m = np.arange(1, int(max_lag // s) + 1)
+        if len(m) == 0:
+            continue
+        score = float(np.interp(m * s, lags, ac).mean())
+        if score > best_score:
+            best_s, best_score = float(s), score
+    return best_s, float(np.clip(ac[k], 0.0, 1.0))
 
 
 def track_lines(profile: np.ndarray, s: float, search: float = 0.35) -> List[int]:
@@ -142,11 +146,13 @@ def detect_scale(rgba: np.ndarray) -> Tuple[float, float]:
 
 def grid_fit(rgba: np.ndarray, s: float) -> float:
     """
-    验证网格是否真的存在：内部边缘能量有多少落在追踪到的网格线 ±1px 内，
-    再和"随便画线也能碰上"的比例 3/s 比。伪像素图约 0.5~0.9，原生像素图接近 0。
+    验证网格是否真的存在：内部边缘能量有多少落在追踪到的网格线附近（窗口 w 个边界），
+    再和"随便画线也能碰上"的比例 w/s 比。伪像素图约 0.5~0.9，原生像素图接近 0。
+    窗口随 s 缩小：s 很小时 ±1px 就把所有位置都盖住了，比不出差别。
     """
     if s < 2.5:
         return 0.0
+    w = 1 if s < 4 else 3
     import cv2
 
     rgba = rgba.copy()
@@ -159,9 +165,10 @@ def grid_fit(rgba: np.ndarray, s: float) -> float:
         if total <= 0:
             continue
         near = np.zeros(len(inner), bool)
+        lo_off = (w - 1) // 2 + 1  # 网格线 x 对应边界 x-1；w=3 时取 x-2..x，w=2 取 x-1..x，w=1 只取 x-1
         for x in track_lines(full, s)[1:-1]:
-            near[max(0, x - 2):min(len(inner), x + 1)] = True  # 边界 x-1 及其左右各一个
-        chance = min(1.0, 3.0 / s)
+            near[max(0, x - lo_off):min(len(inner), x - lo_off + w)] = True
+        chance = min(1.0, w / s)
         scores.append((float(inner[near].sum()) / total - chance) / max(1e-6, 1.0 - chance))
     return float(np.clip(np.mean(scores), 0.0, 1.0)) if scores else 0.0
 

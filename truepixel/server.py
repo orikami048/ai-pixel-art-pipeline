@@ -106,7 +106,12 @@ def handle_process(data: dict) -> dict:
         if mode == "vfx":
             native, prev = process_vfx_image(raw, size, colors, glow_gain=glow)
         elif mode == "native":
-            res = process_native(raw, pixel_size=float(data.get("pixel_size", 0)) or None, color_count=colors)
+            res = process_native(
+                raw, pixel_size=float(data.get("pixel_size", 0)) or None, color_count=colors,
+                apply_outline=bool(data.get("native_outline", False)),
+                outline_color=ops.as_color(data.get("outline_color", [18, 20, 26])),
+                peel=int(data.get("peel", 0)),
+            )
             if not res.parts:
                 raise ValueError("没有找到物体：原图背景需要是纯色（品红 / 绿幕 / 白底）")
             native = res.parts[0] if len(res.parts) == 1 else res.sheet

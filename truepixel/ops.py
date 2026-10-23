@@ -35,6 +35,14 @@ def add_outline(rgba: np.ndarray, color: Color = DEFAULT_OUTLINE) -> np.ndarray:
     return out
 
 
+def peel(rgba: np.ndarray, n: int) -> np.ndarray:
+    """把剪影最外圈剥掉 n 圈（4 邻域）。用来去掉已经画成实心的外发光/光晕带。"""
+    out = rgba.copy()
+    for _ in range(max(0, n)):
+        out[edge_mask(out[:, :, 3])] = 0
+    return out
+
+
 def remove_specks(rgba: np.ndarray, min_area: int = 18) -> np.ndarray:
     """删除面积 <= min_area 的孤立不透明连通块（抠图残留的飞屑）。"""
     if min_area <= 0:
