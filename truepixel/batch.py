@@ -17,6 +17,8 @@ kind:
   sprite  去背景 + 描边（角色、武器、道具、UI）
   tile    不去背景、不描边，铺满整格（地图图块）
   vfx     发光特效，保留半透明光晕
+  native  原生分辨率还原，不缩放到 size（UI 面板、九宫格素材；size 可省略）。
+          原图里有多个物体时另存 <name>_0.png、<name>_1.png…，<name>.png 是总图
 """
 from __future__ import annotations
 
@@ -29,7 +31,7 @@ from typing import Dict, List, Optional
 from PIL import Image, ImageDraw
 
 from . import ops
-from .pipeline import process_image, process_vfx_image
+from .pipeline import process_image, process_native, process_vfx_image
 
 RAW_EXTS = (".png", ".jpg", ".jpeg", ".webp")
 KINDS: Dict[str, dict] = {
@@ -97,7 +99,7 @@ def run(manifest_path: str, force: bool = False, only: Optional[List[str]] = Non
 
     results: List[Result] = []
     for e in manifest["assets"]:
-        name, size, kind = e["name"], int(e["size"]), e.get("kind", "sprite")
+        name, size, kind = e["name"], int(e.get("size", 0)), e.get("kind", "sprite")
         if only and name not in only:
             continue
         out = os.path.join(out_dir, e.get("folder", ""), name + ".png")
@@ -111,18 +113,28 @@ def run(manifest_path: str, force: bool = False, only: Optional[List[str]] = Non
         try:
             src = Image.open(raw)
             opts = dict(e.get("options", {}))
-            if kind == "vfx":
+            os.makedirs(os.path.dirname(out), exist_ok=True)
+            if kind == "native":
+                res = process_native(src, color_count=max_colors, palette=palette, **opts)
+                if not res.parts:
+                    raise ValueError("没有找到物体（背景不是纯色？）")
+                native = res.parts[0] if len(res.parts) == 1 else res.sheet
+                if len(res.parts) > 1:
+                    for i, part in enumerate(res.parts):
+                        part.save(out[:-4] + f"_{i}.png")
+            elif kind == "vfx":
                 native, _ = process_vfx_image(src, size, max_colors, **opts)
             else:
                 native, _ = process_image(
                     src, size, max_colors, palette=palette,
                     content_size=e.get("content_size"), **{**KINDS[kind], **opts},
                 )
-            os.makedirs(os.path.dirname(out), exist_ok=True)
             native.save(out)
             ops.preview(native, pscale).save(os.path.join(preview_dir, name + ".png"))
             n = ops.count_colors(native)
-            note = f"{size}x{size}，{n} 色" + ("（超过上限）" if n > max_colors and kind != "vfx" else "")
+            note = f"{native.width}x{native.height}，{n} 色" + ("（超过上限）" if n > max_colors and kind != "vfx" else "")
+            if kind == "native":
+                note += f"，{len(res.parts)} 个物体，色块 {res.scale:.2f}px"
             results.append(Result(name, "done", note))
             log(f"✅ {name}  {note}")
         except Exception as ex:  # 单张失败不影响其他素材

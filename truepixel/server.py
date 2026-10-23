@@ -4,7 +4,7 @@ TruePixel 网页工作室的后端（仅用标准库 http.server）。
 接口与旧版 app.py 完全一致，web/index.html 无需改动：
   GET  /                 → web/index.html
   GET  /examples/<文件>   → examples/ 下的示例图
-  POST /api/process      → 处理单图 / 特效 / 双层合成
+  POST /api/process      → 处理单图 / 特效 / 双层合成 / 原生像素还原（mode=native，额外返回 parts_base64）
   POST /api/download_zip → 打包批量结果
 """
 from __future__ import annotations
@@ -24,7 +24,7 @@ import zipfile
 from PIL import Image
 
 from . import ops
-from .pipeline import composite_layers, process_image, process_vfx_image, process_hd_pixel
+from .pipeline import composite_layers, process_hd_pixel, process_image, process_native, process_vfx_image
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WEB_DIR = os.path.join(ROOT, "web")
@@ -105,6 +105,18 @@ def handle_process(data: dict) -> dict:
 
         if mode == "vfx":
             native, prev = process_vfx_image(raw, size, colors, glow_gain=glow)
+        elif mode == "native":
+            res = process_native(raw, pixel_size=float(data.get("pixel_size", 0)) or None, color_count=colors)
+            if not res.parts:
+                raise ValueError("没有找到物体：原图背景需要是纯色（品红 / 绿幕 / 白底）")
+            native = res.parts[0] if len(res.parts) == 1 else res.sheet
+            prev = ops.preview(native)
+            extra = {
+                "parts_base64": [_pil_to_b64(p) for p in res.parts],
+                "pixel_scale": round(res.scale, 3),
+                "grid_confidence": round(res.confidence, 3),
+                "background": res.background,
+            }
         elif mode == "hd":
             target_hd = int(data.get("target_size", 2048))
             grid_hd = int(data.get("grid_size", 0)) or None

@@ -5,6 +5,7 @@
   truepixel batch   asset_list.json [--force] [--only 名字 ...]
   truepixel sheet   九宫格.png 精灵表.png --rows 3 --cols 3 --frames 8 --size 96
   truepixel tiers   weapon_xian.png 输出目录 --slot weapon
+  truepixel native  ui_panel.png 输出目录 [--pixel-size 5] [--palette p.png]
   truepixel serve   [--port 7860] [--no-browser]
 
 没有 pip install 时也可以用：python -m truepixel <子命令> ...
@@ -109,6 +110,32 @@ def cmd_hd(a) -> None:
     if a.preview:
         _save(low_res, a.output[:-4] + "_grid.png")
 
+def cmd_native(a) -> None:
+    from . import ops
+    from .pipeline import process_native
+
+    res = process_native(
+        Image.open(a.input), pixel_size=a.pixel_size, color_count=a.colors,
+        palette=ops.load_palette(a.palette) if a.palette else None,
+        background=a.bg, split=not a.no_split, apply_outline=a.outline,
+        outline_color=ops.parse_hex_color(a.outline_color), min_part=a.min_part,
+    )
+    name = a.name or os.path.splitext(os.path.basename(a.input))[0]
+    grid_note = f"色块 {res.scale:.2f}px，吻合度 {res.confidence:.2f}" if res.scale > 1 else f"未检测到伪像素网格（吻合度 {res.confidence:.2f}），按原生像素处理"
+    print(f"背景：{res.background}；{grid_note}；{len(res.parts)} 个物体")
+    if not res.parts:
+        sys.exit("❌ 没有找到物体：检查背景是否是纯色，或用 --bg none")
+    paths = [os.path.join(a.out_dir, f"{name}.png")] if len(res.parts) == 1 else \
+        [os.path.join(a.out_dir, f"{name}_{i}.png") for i in range(len(res.parts))]
+    for p, img in zip(paths, res.parts):
+        _save(img, p)
+        print(f"✅ {p}  {img.width}x{img.height}，{ops.count_colors(img)} 色")
+        if a.preview:
+            _save(ops.preview(img, a.preview), os.path.join(a.out_dir, "_preview", os.path.basename(p)))
+    if len(res.parts) > 1:
+        _save(res.sheet, os.path.join(a.out_dir, f"{name}_sheet.png"))
+
+
 def cmd_serve(a) -> None:
     from .server import run_server
 
@@ -173,6 +200,22 @@ def build_parser() -> argparse.ArgumentParser:
     hd.add_argument("--pixel-size", type=int, help="每个像素方块对应的原图像素大小（如 2, 4）")
     hd.add_argument("--preview", action="store_true", help="另存一份基准网格低清图")
     hd.set_defaults(func=cmd_hd)
+
+    nv = sub.add_parser("native", help="伪像素原图 → 原生分辨率真像素，自动拆分多个物体（UI、九宫格素材）")
+    nv.add_argument("input")
+    nv.add_argument("out_dir")
+    nv.add_argument("--name", help="输出文件名前缀（默认原图文件名）")
+    nv.add_argument("--pixel-size", type=float, help="原图里一个像素的边长，留空自动检测")
+    nv.add_argument("--colors", type=int, default=32, help="减色上限，0 不减色")
+    nv.add_argument("--palette", help="调色板 PNG，给了就统一映射到它")
+    nv.add_argument("--bg", default="auto", choices=["auto", "chroma", "flat", "rembg", "none"],
+                    help="去背景方式：auto 依次尝试品红/绿幕、纯色底、rembg")
+    nv.add_argument("--no-split", action="store_true", help="不拆分，整张当一个物体")
+    nv.add_argument("--outline", action="store_true", help="另加 1px 描边（AI 原图通常自带）")
+    nv.add_argument("--outline-color", default="#12141a")
+    nv.add_argument("--min-part", type=int, default=4, help="小于 N×N 真像素的碎块丢掉")
+    nv.add_argument("--preview", type=int, metavar="N", help="另存放大 N 倍预览到 _preview/")
+    nv.set_defaults(func=cmd_native)
 
     sv = sub.add_parser("serve", help="启动网页工作室")
     sv.add_argument("--port", type=int, default=7860)

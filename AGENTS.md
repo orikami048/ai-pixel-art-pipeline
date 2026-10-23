@@ -20,11 +20,13 @@ TruePixel：把 AI 生成的"伪像素"图转成真像素游戏素材。主要�
 
 ```text
 truepixel/ops.py         底层像素操作。描边、去飞屑、透明度、调色板都只在这里实现一次
-truepixel/background.py  rembg 抠图 + 纯色背景保底（rembg 是可选依赖，懒加载）
-truepixel/pipeline.py    process_image / process_vfx_image / composite_layers / process_sheet
+truepixel/background.py  品红/绿幕色键 + rembg 抠图 + 纯色背景保底（rembg 是可选依赖，懒加载）
+truepixel/grid.py        伪像素网格还原：估计色块边长、逐条追踪网格线、按格取中位色
+truepixel/pipeline.py    process_image / process_vfx_image / composite_layers / process_sheet / process_native
 truepixel/tiers.py       十阶品质变色
 truepixel/batch.py       素材清单批处理
-truepixel/cli.py         命令行：single / batch / sheet / tiers / serve
+truepixel/cli.py         命令行：single / native / batch / sheet / tiers / hd / serve
+skills/                  给生图 AI（Gemini / Antigravity）用的 skill，安装方法见 skills/README.md
 truepixel/server.py      网页后端；接口和 web/index.html 绑定，不要改字段名
 scripts/                 专用脚本，必须 import truepixel，不许复制函数
 app.py / true_pixel.py / true_pixel_core.py   旧入口兼容层，别删（用户和别的项目还在用）
@@ -46,6 +48,7 @@ app.py / true_pixel.py / true_pixel_core.py   旧入口兼容层，别删（用�
 python -m unittest discover -s tests -v            # 测试
 python -m truepixel serve                          # 网页工作室 http://127.0.0.1:7860
 python -m truepixel single in.png out.png --size 96
+python -m truepixel native ui_panel.png out_dir --preview 4   # 原生分辨率还原 + 自动拆物体
 python -m truepixel batch D:\work\asset_list.json  # 素材工作区批处理
 python -m truepixel sheet grid.jpg sheet.png --rows 3 --cols 3 --frames 8 --size 96 --hd 3
 python -m truepixel tiers weapon_xian.png out_dir --slot weapon
@@ -68,6 +71,9 @@ Windows 控制台先 `$env:PYTHONIOENCODING="utf-8"`，否则中文和 emoji 可
 - **2026-10-22 · Claude · 保留旧行为：二值化透明度时不清零透明像素的 RGB。** 这些隐藏颜色会参与 median-cut 减色。清零会让输出和旧版不一致，所以默认保留；`process_sheet` 沿用旧版的清零行为。以后如果想优化调色，可以改成只对不透明像素减色，但要记一条决策。
 - **2026-10-22 · Claude · 网页服务默认只监听 127.0.0.1**，并修复了 `/examples/` 的路径穿越。需要局域网访问时用 `--host 0.0.0.0`。
 
+- **2026-10-24 · Claude · 新增 `process_native`（命令 `native`、批处理 `kind: "native"`、网页"原生还原"模式）。** 原因：`process_image` 先 LANCZOS 缩放再减色，伪像素的色块网格对不上目标尺寸，结果发糊；而且只能输出正方形，UI 面板（3:1）、九宫格素材、一张图里多个物体都没法用。新流程按检测到的色块边长逐格取中位色，输出原生分辨率，按连通域拆物体。不影响旧模式。
+- **2026-10-24 · Claude · `remove_background` 遇到四角是均匀品红/绿色时改用色键，不再走 rembg。** 原因：rembg 会把 UI 边框这类"不像物体"的主体删掉，品红底下色键更稳，还能删干净镂空处、处理边缘溢色。影响：品红/绿幕底的原图用 `single`/`batch` 重新处理，结果会和以前不同（一般更干净）。白底等其他背景行为不变。批处理报告的尺寸改为写实际宽高（正方形素材不变）。
+
 ## 7. 经验记录（踩过的坑，按时间追加）
 
 - 测试批次必须用**真的 AI 原图**。用代码画几个色块当原图，只能证明脚本能跑，看不出抠图、描边和风格统一的问题（2026-10-22 D:\work 测试批次就因此被打回）。
@@ -76,7 +82,14 @@ Windows 控制台先 `$env:PYTHONIOENCODING="utf-8"`，否则中文和 emoji 可
 - 1px 描边是"内描边"：把剪影最外圈涂成描边色，不会让剪影变大。所以描边时缩放会预留 2px。
 - 十阶变色靠"接近黑色的像素是描边"来区分描边和主体（RGB ≤ 24/24/28），母版主体里不要用这么暗的颜色，否则会被当成描边不变色。
 
+- 伪像素网格检测：剪影外缘的边特别强，会让"物体高度"变成自相关最强的周期，所以估计周期只看两侧都不透明的内部边（`interior_only`）。判断网格是否存在不能只看自相关峰（原生像素图也总有峰），要看边缘能量有多少落在追踪出的网格线上（`grid_fit`），先 3×3 中值滤波去逐像素噪点。
+- 合成测试图要有纹理：只有几条边的面板，周期本来就量不准，测出来失败不代表算法错。真实 AI 原图（examples/ 里的 1024 图）色块约 5.1px，吻合度 0.73~0.80；原生像素图 ≤ 0.25；阈值 0.3。
+- 色块小于约 3px 且有模糊时自动检测会失败，用 `--pixel-size` 手动指定。
+- AI 原图里的外发光、投影抠不干净（半透明像素会变成一圈实心杂色）。这不是后处理能修的，要在提示词里禁止，发光状态交给引擎做（shader / modulate）。
+
 ## 8. 已知问题 / 以后可以做
+
+- 网页"原生还原"模式下，目标分辨率和描边开关不起作用（原生模式不缩放、默认不加描边），界面上还没隐藏。
 
 - 透明像素的隐藏颜色会占用减色名额（见设计决策），对小尺寸素材可能浪费 1~2 个颜色。
 - 发光特效模式的"颜色数"统计包含不同透明度，数值偏大，仅供参考。

@@ -106,6 +106,21 @@ def quantize(img: Image.Image, colors: int = 32, palette: Optional[np.ndarray] =
     return Image.merge("RGBA", (*q.split(), a))
 
 
+def quantize_opaque(rgba: np.ndarray, colors: int = 32, palette: Optional[np.ndarray] = None) -> np.ndarray:
+    """只对不透明像素减色，透明像素不占颜色名额。"""
+    if palette is not None:
+        return map_to_palette(rgba, palette)
+    out = rgba.copy()
+    opaque = out[:, :, 3] > 0
+    px = out[opaque, :3]
+    if len(px) == 0 or len(np.unique(px, axis=0)) <= colors:
+        return out
+    strip = Image.fromarray(px.reshape(1, -1, 3), "RGB")
+    q = strip.quantize(colors=colors, method=Image.Quantize.MEDIANCUT).convert("RGB")
+    out[opaque, :3] = np.array(q).reshape(-1, 3)
+    return out
+
+
 def count_colors(img: Image.Image) -> int:
     arr = np.array(img.convert("RGBA")).reshape(-1, 4)
     arr = arr[arr[:, 3] > 0]

@@ -941,6 +941,7 @@
               <option value="solid" selected>🗡️ 道具 (实体单图)</option>
               <option value="vfx">✨ 特效 (发光单图)</option>
               <option value="composite">⚔️ 双图层合体</option>
+              <option value="native">🧩 原生还原 (UI / 多物体)</option>
             </select>
           </div>
 
@@ -2388,6 +2389,7 @@
         const duration = Math.round(t1 - t0);
         state.currentNativeBase64 = res.native_base64;
         state.currentPreview4xBase64 = res.preview4x_base64;
+        state.currentParts = res.parts_base64 || [];
         imgPixel.src = res.native_base64;
         applyZoom();
 
@@ -2406,13 +2408,19 @@
         }
 
         document.getElementById('raw-res-meta').innerText = `${res.raw_width} × ${res.raw_height}`;
-        document.getElementById('pixel-res-meta').innerText = `${res.target_size} × ${res.target_size} Px`;
+        document.getElementById('pixel-res-meta').innerText = res.parts_base64
+          ? `${res.parts_base64.length} 个物体 · 色块 ${res.pixel_scale}px`
+          : `${res.target_size} × ${res.target_size} Px`;
         document.getElementById('meta-time').innerText = `${duration} ms`;
         document.getElementById('meta-colors').innerText = `${res.actual_colors || state.colorCount} 色`;
         document.getElementById('meta-outline').innerText = state.mode === 'vfx' ? '无 (发光专用)' : (state.applyOutline ? '已生成 1px 闭合' : '无');
 
         if (imgPixel) imgPixel.style.transform = 'none';
-        addLog('success', `✅ 转换成功！耗时 ${duration}ms, 成品 ${res.target_size}×${res.target_size} Px, 调色板 ${res.actual_colors || state.colorCount} 色`);
+        if (res.parts_base64) {
+          addLog('success', `✅ 原生还原完成！耗时 ${duration}ms, 背景=${res.background}, 色块 ${res.pixel_scale}px (吻合度 ${res.grid_confidence}), 拆出 ${res.parts_base64.length} 个物体`);
+        } else {
+          addLog('success', `✅ 转换成功！耗时 ${duration}ms, 成品 ${res.target_size}×${res.target_size} Px, 调色板 ${res.actual_colors || state.colorCount} 色`);
+        }
       } catch (err) {
         addLog('error', `❌ 转换接口返回错误: ${err.message}`);
         if (!isSilent) alert('转换失败: ' + err.message);
@@ -2494,6 +2502,10 @@
     // 下载功能
     btnDownloadNative.addEventListener('click', () => {
       if (!state.currentNativeBase64) return;
+      if (state.mode === 'native' && state.currentParts && state.currentParts.length > 1) {
+        state.currentParts.forEach((p, i) => downloadDataUrl(p, `true_pixel_native_part${i}.png`));
+        return;
+      }
       downloadDataUrl(state.currentNativeBase64, `true_pixel_${state.mode}_${state.targetSize}x${state.targetSize}.png`);
     });
 

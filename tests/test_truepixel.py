@@ -17,7 +17,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
 from truepixel import background, ops  # noqa: E402
-from truepixel.pipeline import composite_layers, process_hd_pixel, process_image, process_sheet, process_vfx_image  # noqa: E402
+from truepixel.pipeline import (composite_layers, process_hd_pixel, process_image, process_native,  # noqa: E402
+                                process_sheet, process_vfx_image)
 
 background.rembg_available = lambda: False  # 测试一律走纯色背景抠图
 
@@ -228,6 +229,116 @@ class ServerTest(unittest.TestCase):
         from truepixel.server import EXAMPLES_DIR, _safe_join
 
         self.assertIsNone(_safe_join(EXAMPLES_DIR, "../truepixel/server.py"))
+
+
+def fake_pixel_art(native: np.ndarray, scale: float, bg=(255, 0, 255), canvas=(560, 400),
+                   at=(60, 50), blur=1.0, noise=6, seed=0) -> Image.Image:
+    """模拟 AI 伪像素原图：真像素小图按非整数倍放大，贴到纯色背景上，再加模糊和噪点。"""
+    from PIL import ImageFilter
+
+    h, w = native.shape[:2]
+    big = Image.fromarray(native, "RGBA").resize((int(round(w * scale)), int(round(h * scale))), Image.Resampling.NEAREST)
+    im = Image.new("RGBA", canvas, bg + (255,))
+    im.alpha_composite(big, at)
+    im = im.convert("RGB").filter(ImageFilter.GaussianBlur(blur))
+    arr = np.array(im).astype(np.int16)
+    arr += np.random.default_rng(seed).integers(-noise, noise + 1, arr.shape)
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8), "RGB")
+
+
+def tiny_panel(w=24, h=10) -> np.ndarray:
+    """
+    一个小 UI 面板：深色描边 + 铜色边框 + 带做旧纹理的深绿内底 + 四个角花点。
+    纹理是必须的：真实 AI 原图到处都有色块边缘，只有几条边的图连人眼都量不准周期。
+    """
+    a = np.zeros((h, w, 4), np.uint8)
+    a[:, :] = (30, 24, 18, 255)
+    a[1:-1, 1:-1] = (150, 120, 60, 255)
+    a[2:-2, 2:-2] = (16, 40, 32, 255)
+    rng = np.random.default_rng(1)
+    spots = rng.random((h - 4, w - 4)) < 0.3
+    a[2:-2, 2:-2][spots] = (36, 70, 56, 255)
+    a[2, 2] = a[2, -3] = a[-3, 2] = a[-3, -3] = (220, 190, 110, 255)
+    return a
+
+
+class NativeTest(unittest.TestCase):
+
+    def test_chroma_key_removes_magenta_and_holes(self):
+        native = tiny_panel()
+        native[4:6, 10:14, 3] = 0  # 镂空：和外部背景不连通，也要删掉
+        res = process_native(fake_pixel_art(native, 7.0), color_count=0)
+        self.assertEqual(res.background, "magenta")
+        a = np.array(res.parts[0])
+        self.assertTrue(set(np.unique(a[:, :, 3])) <= {0, 255})
+        self.assertEqual(a[5, 12, 3], 0)
+        # 留下来的像素里不应该有明显的品红色偏
+        solid = a[a[:, :, 3] > 0, :3].astype(int)
+        self.assertLess((np.minimum(solid[:, 0], solid[:, 2]) - solid[:, 1]).max(), 60)
+
+    def test_detects_fractional_scale_and_rebuilds_exact_pixels(self):
+        native = tiny_panel()
+        for scale in (5.0, 6.4, 9.0):
+            res = process_native(fake_pixel_art(native, scale), color_count=0)
+            self.assertAlmostEqual(res.scale, scale, delta=0.25, msg=f"scale={scale}")
+            out = np.array(res.parts[0])
+            self.assertEqual(out.shape, native.shape, f"scale={scale}")
+            diff = np.abs(out[:, :, :3].astype(int) - native[:, :, :3].astype(int)).max()
+            self.assertLessEqual(diff, 20, f"scale={scale}")  # 模糊会让孤立的亮点略暗
+
+    def test_splits_objects_in_reading_order(self):
+        a, b = tiny_panel(24, 10), tiny_panel(12, 12)
+        src = fake_pixel_art(a, 6.0, canvas=(700, 400), at=(40, 40))
+        big = Image.fromarray(b, "RGBA").resize((72, 72), Image.Resampling.NEAREST)
+        src.paste(big.convert("RGB"), (400, 260))
+        res = process_native(src, pixel_size=6.0, color_count=0)
+        self.assertEqual([p.size for p in res.parts], [(24, 10), (12, 12)])
+        self.assertEqual(res.sheet.mode, "RGBA")
+
+    def test_white_background_keeps_interior_white(self):
+        native = tiny_panel()
+        native[4:6, 8:16] = (252, 252, 250, 255)  # 内部白色高光，和背景同色但不连通
+        res = process_native(fake_pixel_art(native, 6.0, bg=(252, 252, 250)), color_count=0)
+        self.assertEqual(res.background, "flat")
+        self.assertEqual(np.array(res.parts[0])[5, 10, 3], 255)
+
+    def test_no_grid_means_native_already(self):
+        native = tiny_panel(40, 20)
+        img = Image.new("RGB", (100, 80), (255, 0, 255))
+        img.paste(Image.fromarray(native[:, :, :3]), (30, 30))
+        res = process_native(img, color_count=0)
+        self.assertEqual(res.parts[0].size, (40, 20))
+
+    def test_api_process_native(self):
+        from truepixel.server import handle_process
+
+        buf = io.BytesIO()
+        fake_pixel_art(tiny_panel(), 6.0).save(buf, format="PNG")
+        res = handle_process({"mode": "native", "color_count": 16,
+                              "image_base64": "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()})
+        self.assertTrue(res["success"])
+        self.assertEqual(len(res["parts_base64"]), 1)
+        self.assertAlmostEqual(res["pixel_scale"], 6.0, delta=0.25)
+
+    def test_batch_native_kind(self):
+        from truepixel.batch import run
+
+        with tempfile.TemporaryDirectory() as d:
+            os.makedirs(os.path.join(d, "raw"))
+            src = fake_pixel_art(tiny_panel(24, 10), 6.0, canvas=(700, 500), at=(40, 40))
+            src.paste(Image.fromarray(tiny_panel(12, 12)[:, :, :3]).resize((72, 72), Image.Resampling.NEAREST), (400, 300))
+            src.save(os.path.join(d, "raw", "ui_frames.png"))
+            with open(os.path.join(d, "list.json"), "w", encoding="utf-8") as f:
+                json.dump({"assets": [{"name": "ui_frames", "folder": "ui", "kind": "native"}]}, f)
+            results = run(os.path.join(d, "list.json"), log=lambda *_: None)
+            self.assertEqual(results[0].status, "done", results[0].note)
+            self.assertEqual(Image.open(os.path.join(d, "assets", "ui", "ui_frames_0.png")).size, (24, 10))
+            self.assertEqual(Image.open(os.path.join(d, "assets", "ui", "ui_frames_1.png")).size, (12, 12))
+
+    def test_remove_background_prefers_chroma_key(self):
+        arr = background.remove_background(fake_pixel_art(tiny_panel(), 6.0))
+        self.assertEqual(arr[0, 0, 3], 0)
+        self.assertEqual(arr[200, 300, 3], 0)
 
 
 class LegacyCliTest(unittest.TestCase):

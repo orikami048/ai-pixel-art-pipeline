@@ -4,6 +4,7 @@ web 服务、命令行和批处理都只调用这里的函数。
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
 import numpy as np
@@ -252,6 +253,132 @@ def process_sheet(
     for i, f in enumerate(out_frames):
         strip.paste(f, (i * frame_size, 0))
     return strip, out_frames
+
+
+# ================================================================ 原生像素还原（UI / 多物体图）
+
+@dataclass
+class NativeResult:
+    parts: List[Image.Image]                # 每个物体一张，原生分辨率，按从上到下、从左到右排
+    boxes: List[Tuple[int, int, int, int]]  # 每个物体在原图里的位置 (x0, y0, x1, y1)
+    sheet: Image.Image                      # 所有物体按原图相对位置拼在一起的原生分辨率总图
+    scale: float                            # 检测到的色块边长（原图几个像素 = 1 个真像素）
+    confidence: float                       # 网格吻合度 0~1，< 0.3 视为没有伪像素网格（scale 置 1）
+    background: str                         # 用了哪种去背景：magenta / green / flat / rembg / none
+
+
+def _strip_background(img: Image.Image, mode: str) -> Tuple[np.ndarray, str]:
+    from .background import (chroma_key, detect_chroma, rembg_available,
+                             remove_background, remove_border_background)
+
+    if mode == "none":
+        return np.array(img.convert("RGBA")), "none"
+    key = detect_chroma(img)
+    if key and mode in ("auto", "chroma"):
+        return chroma_key(img, key), key
+    corners = ops.corner_samples(np.array(img.convert("RGB")).astype(np.float32))
+    if mode in ("auto", "flat") and np.std(corners, axis=0).mean() < 25:
+        return remove_border_background(img), "flat"
+    if mode in ("auto", "rembg") and rembg_available():
+        return remove_background(img), "rembg"
+    return np.array(img.convert("RGBA")), "none"
+
+
+def _reading_order(boxes: List[Tuple[int, int, int, int]]) -> List[Tuple[int, int, int, int]]:
+    """从上到下分行（纵向重叠超过一半算同一行），行内从左到右。"""
+    rows: List[List[Tuple[int, int, int, int]]] = []
+    for b in sorted(boxes, key=lambda b: (b[1], b[0])):
+        head = rows[-1][0] if rows else None
+        if head and b[1] < head[3] - 0.5 * (head[3] - head[1]):
+            rows[-1].append(b)
+        else:
+            rows.append([b])
+    return [b for row in rows for b in sorted(row, key=lambda b: b[0])]
+
+
+def process_native(
+    input_image: Image.Image,
+    pixel_size: Optional[float] = None,
+    color_count: int = 32,
+    palette: Optional[np.ndarray] = None,
+    background: str = "auto",
+    split: bool = True,
+    apply_outline: bool = False,
+    outline_color: Color = DEFAULT_OUTLINE,
+    min_part: int = 4,
+    group_gap: Optional[int] = None,
+) -> NativeResult:
+    """
+    AI 伪像素原图 → 原生分辨率真像素，可自动拆成多个物体。不缩放到固定正方形，适合 UI 面板、
+    按钮、九宫格素材，以及一张图里画了好几个物体的情况。
+
+    pixel_size：原图里一个"像素"的边长，留空自动检测（检测结果在 result.scale）。
+    color_count：0 表示不减色。
+    background：auto | chroma | flat | rembg | none。auto 依次尝试品红/绿幕色键、白底等纯色背景、rembg。
+    min_part：小于 min_part×min_part 个真像素的碎块当飞屑丢掉。
+    group_gap：两个碎块相距小于这么多原图像素就算同一个物体（默认 2 个色块）。
+    apply_outline：AI 原图一般自带描边，默认不再加。
+    """
+    import cv2
+    from . import grid
+
+    arr, bg_used = _strip_background(input_image.convert("RGBA"), background)
+    has_alpha = bool(np.any(arr[:, :, 3] < 255))
+    if has_alpha:
+        arr = ops.harden_alpha(arr, 128, erode=0)
+
+    if pixel_size and pixel_size > 0:
+        s, conf = float(pixel_size), 1.0
+    else:
+        s, _ = grid.detect_scale(arr)
+        conf = grid.grid_fit(arr, s)
+        if conf < 0.3:  # 边缘没有落在网格线上：当作已经是原生像素
+            s = 1.0
+
+    solid = arr[:, :, 3] > 0
+    if split and has_alpha:
+        gap = group_gap if group_gap is not None else max(2, int(round(2 * s)))
+        merged = cv2.dilate(solid.astype(np.uint8), np.ones((3, 3), np.uint8), iterations=max(1, gap // 2))
+        n, labels = cv2.connectedComponents(merged, connectivity=8)
+        boxes = []
+        for i in range(1, n):
+            ys, xs = np.nonzero((labels == i) & solid)
+            if len(xs) >= min_part * min_part * s * s:
+                boxes.append((int(xs.min()), int(ys.min()), int(xs.max()) + 1, int(ys.max()) + 1))
+    else:
+        bb = Image.fromarray(arr, "RGBA").getbbox() if has_alpha else (0, 0, arr.shape[1], arr.shape[0])
+        boxes = [bb] if bb else []
+    boxes = _reading_order(boxes)
+
+    parts = []
+    pad = int(np.ceil(s))
+    for (x0, y0, x1, y1) in boxes:
+        cx0, cy0 = max(0, x0 - pad), max(0, y0 - pad)
+        cx1, cy1 = min(arr.shape[1], x1 + pad), min(arr.shape[0], y1 + pad)
+        crop = arr[cy0:cy1, cx0:cx1].copy()
+        if split and has_alpha:  # 别的物体伸进 pad 区的部分不要
+            mine = np.zeros(solid.shape, bool)
+            mine[y0:y1, x0:x1] = True
+            crop[~mine[cy0:cy1, cx0:cx1], 3] = 0
+        native, _, _ = grid.to_native(crop, s)
+        if color_count or palette is not None:
+            native = ops.quantize_opaque(native, color_count, palette)
+        if apply_outline and has_alpha:
+            native = ops.add_outline(native, outline_color)
+        parts.append(ops.crop_to_content(Image.fromarray(native, "RGBA")))
+
+    if parts:  # 总图：按原图相对位置摆放
+        pos = [(int(round(b[0] / s)), int(round(b[1] / s))) for b in boxes]
+        ox, oy = min(p[0] for p in pos), min(p[1] for p in pos)
+        w = max(p[0] - ox + im.width for p, im in zip(pos, parts))
+        h = max(p[1] - oy + im.height for p, im in zip(pos, parts))
+        sheet = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+        for (px, py), im in zip(pos, parts):
+            sheet.alpha_composite(im, (px - ox, py - oy))
+    else:
+        sheet = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+
+    return NativeResult(parts, boxes, sheet, s, conf, bg_used)
 
 
 # ================================================================ 高清 2K 真像素 (背景/场景)
