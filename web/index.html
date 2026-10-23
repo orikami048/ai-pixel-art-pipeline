@@ -1095,13 +1095,13 @@
                 <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
                   <span>水平平移 X:</span><strong id="lbl-offset-x" style="color:var(--accent-cyan);">0 px</strong>
                 </div>
-                <input type="range" id="range-offset-x" min="-96" max="96" step="1" value="0" style="margin-top:4px;">
+                <input type="range" id="range-offset-x" min="-1024" max="1024" step="1" value="0" style="margin-top:4px;">
               </div>
               <div>
                 <div style="font-size:11px; color:var(--text-muted); display:flex; justify-content:space-between;">
                   <span>垂直平移 Y:</span><strong id="lbl-offset-y" style="color:var(--accent-cyan);">0 px</strong>
                 </div>
-                <input type="range" id="range-offset-y" min="-96" max="96" step="1" value="0" style="margin-top:4px;">
+                <input type="range" id="range-offset-y" min="-1024" max="1024" step="1" value="0" style="margin-top:4px;">
               </div>
             </div>
             <div class="switch-subtext" style="margin-top: 6px;">💡 可在右侧预览画布直接拖拽移动位置，按滑块自由拉伸特效匹配道具。</div>
@@ -1601,6 +1601,7 @@
         const padText = { '0': '+0% 标准', '0.2': '+20% 扩展', '0.5': '+50% 广角', '1': '+100% 巨幅', '1.0': '+100% 巨幅' };
         const lblPad = document.getElementById('lbl-canvas-padding');
         if (lblPad) lblPad.innerText = padText[btn.dataset.padding] || '+0%';
+        updateOffsetRange();
         updateLiveComposite();
       });
     });
@@ -1633,6 +1634,7 @@
         btn.classList.add('active');
         state.targetSize = parseInt(btn.dataset.size);
         document.getElementById('lbl-resolution').innerText = `${state.targetSize} × ${state.targetSize}`;
+        updateOffsetRange();
         applyZoom();
       });
     });
@@ -2414,8 +2416,9 @@
       const dx = Math.round((e.clientX - dragStartX) / zoomRatio);
       const dy = Math.round((e.clientY - dragStartY) / zoomRatio);
 
-      state.offsetX = Math.max(-96, Math.min(96, dragInitOffsetX + dx));
-      state.offsetY = Math.max(-96, Math.min(96, dragInitOffsetY + dy));
+      const maxOffset = updateOffsetRange();
+      state.offsetX = Math.max(-maxOffset, Math.min(maxOffset, dragInitOffsetX + dx));
+      state.offsetY = Math.max(-maxOffset, Math.min(maxOffset, dragInitOffsetY + dy));
 
       const rangeX = document.getElementById('range-offset-x');
       const rangeY = document.getElementById('range-offset-y');
@@ -2447,6 +2450,26 @@
         liveCompositeRaf = null;
         renderLiveComposite();
       });
+    }
+
+    
+    // 动态根据当前分辨率和留白扩展更新水平/垂直位移滑块的最大范围
+    function updateOffsetRange() {
+      const size = state.targetSize || 96;
+      const pad = state.canvasPadding || 0.0;
+      // 范围至少为 512，且至少覆盖整张画布及留白区域
+      const maxOffset = Math.max(512, Math.round(size * (1 + pad)));
+      const rangeX = document.getElementById('range-offset-x');
+      const rangeY = document.getElementById('range-offset-y');
+      if (rangeX) {
+        rangeX.min = -maxOffset;
+        rangeX.max = maxOffset;
+      }
+      if (rangeY) {
+        rangeY.min = -maxOffset;
+        rangeY.max = maxOffset;
+      }
+      return maxOffset;
     }
 
     function updateLiveComposite() {
